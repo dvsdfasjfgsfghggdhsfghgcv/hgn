@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打怪游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        
+        canvas {
+            background-color: black;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .button {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 5px;
+            width: 200px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1 style="text-align: center;">打怪游戏</h1>
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+    <a class="button" href="game.html">返回游戏选择</a>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let player = {
+            x: 50,
+            y: 50,
+            width: 30,
+            height: 30,
+            health: 3
+        };
+        let bullets = [];
+        let monsters = [];
+        let companions = [];
+        let score = 0;
+        let gameOver = false;
+
+        function spawnMonster() {
+            let x, y;
+            // 确保怪物生成在玩家右边 3 格以外
+            do {
+                x = Math.random() * (canvas.width - 30);
+                y = Math.random() * (canvas.height - 30);
+            } while (x <= player.x + player.width + 75); // 75 是 3 格的宽度
+
+            monsters.push({
+                x: x,
+                y: y,
+                width: 30,
+                height: 30,
+                health: 1
+            });
+        }
+
+        function spawnCompanion() {
+            companions.push({
+                x: player.x,
+                y: player.y,
+                width: 30,
+                height: 30,
+                health: 3
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // 绘制玩家
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            // 绘制同伴
+            companions.forEach(companion => {
+                ctx.fillStyle = 'green';
+                ctx.fillRect(companion.x, companion.y, companion.width, companion.height);
+            });
+
+            // 绘制子弹
+            bullets.forEach(bullet => {
+                ctx.fillStyle = 'yellow';
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+
+            // 绘制怪物
+            monsters.forEach(monster => {
+                ctx.fillStyle = 'red';
+                ctx.fillRect(monster.x, monster.y, monster.width, monster.height);
+            });
+
+            // 绘制得分和生命值
+            ctx.fillStyle = 'white';
+            ctx.fillText("得分: " + score, 10, 20);
+            ctx.fillText("生命: " + player.health, 10, 40);
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            // 更新子弹位置
+            bullets.forEach((bullet, bulletIndex) => {
+                bullet.x += bullet.speed; // 子弹向右移动
+                if (bullet.x > canvas.width) {
+                    bullets.splice(bulletIndex, 1); // 移除超出画布的子弹
+                }
+            });
+
+            // 检查与怪物的碰撞
+            monsters.forEach((monster, monsterIndex) => {
+                // 检查子弹与怪物的碰撞
+                bullets.forEach((bullet, bulletIndex) => {
+                    if (bullet.x < monster.x + monster.width &&
+                        bullet.x + bullet.width > monster.x &&
+                        bullet.y < monster.y + monster.height &&
+                        bullet.y + bullet.height > monster.y) {
+                        // 碰撞检测
+                        monsters.splice(monsterIndex, 1); // 移除怪物
+                        bullets.splice(bulletIndex, 1); // 移除子弹
+                        score += 10; // 增加得分
+                    }
+                });
+
+                // 检查怪物与玩家的碰撞
+                if (player.x < monster.x + monster.width &&
+                    player.x + player.width > monster.x &&
+                    player.y < monster.y + monster.height &&
+                    player.y + player.height > monster.y) {
+                    // 碰撞检测
+                    player.health--; // 玩家掉一滴血
+                    if (player.health <= 0) {
+                        alert("游戏结束！得分: " + score);
+                        gameOver = true;
+                    }
+                }
+
+                // 怪物向玩家移动
+                if (monster.x < player.x) monster.x += 0.5;
+                if (monster.x > player.x) monster.x -= 0.5;
+                if (monster.y < player.y) monster.y += 0.5;
+                if (monster.y > player.y) monster.y -= 0.5;
+            });
+
+            // 更新同伴的位置和攻击
+            companions.forEach(companion => {
+                // 同伴向怪物发射子弹
+                bullets.push({
+                    x: companion.x + companion.width,
+                    y: companion.y + companion.height / 2 - 2,
+                    width: 5,
+                    height: 5,
+                    speed: 5
+                });
+            });
+        }
+
+        function gameLoop() {
+            if (!gameOver) {
+                draw();
+                update();
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // 键盘事件监听
+        document.addEventListener('keydown', (event) => {
+            switch (event.key) {
+                case 'ArrowUp':
+                    if (player.y > 0) player.y -= 10; // 向上移动
+                    break;
+                case 'ArrowDown':
+                    if (player.y < canvas.height - player.height) player.y += 10; // 向下移动
+                    break;
+                case 'ArrowLeft':
+                    if (player.x > 0) player.x -= 10; // 向左移动
+                    break;
+                case 'ArrowRight':
+                    if (player.x < canvas.width - player.width) player.x += 10; // 向右移动
+                    break;
+                case ' ': // 空格键发射子弹
+                    bullets.push({
+                        x: player.x + player.width,
+                        y: player.y + player.height / 2 - 2,
+                        width: 5,
+                        height: 5,
+                        speed: 5
+                    });
+                    break;
+            }
+        });
+
+        // 每隔一段时间生成怪物
+        setInterval(spawnMonster, 2000); // 每2秒生成一个怪物
+
+        // 每100分生成一个同伴
+        setInterval(() => {
+            if (score > 0 && score % 100 === 0) {
+                spawnCompanion();
+            }
+        }, 1000); // 每秒检查一次
+
+        // 启动游戏
+        gameLoop();
+    </script>
+</body>
+
+</html>

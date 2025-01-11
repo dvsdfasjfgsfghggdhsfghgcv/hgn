@@ -23,6 +23,26 @@
             color: blue;
             text-decoration: underline;
         }
+        
+        a {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 20px;
+            color: blue;
+            text-decoration: underline;
+        }
+        
+        .button {
+            display: inline-block;
+            margin: 10px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 5px;
+        }
     </style>
 </head>
 
@@ -31,12 +51,18 @@
     <p>欢迎来到游戏界面！在这里您可以开始游戏。</p>
     <!-- 添加贪吃蛇游戏名称 -->
     <h2 style="text-align: center;" onclick="startSnakeGame()">贪吃蛇</h2>
+    <!-- 超链接重定向到贪吃蛇游戏 -->
+    <a href="snake_game.html">点击这里进入贪吃蛇游戏</a>
+    <!-- 新增打怪游戏按钮 -->
+    <a class="button" href="monster_game.html">进入打怪游戏</a>
+    <!-- 返回按钮 -->
+    <a class="button" href="dashboard.html">返回用户仪表盘</a>
     <!-- 这里可以添加更多游戏相关的内容 -->
 </body>
 
 <script>
     function startSnakeGame() {
-        // 重定向到贪吃蛇游戏的页面
+        // 这里可以添加进入贪吃蛇游戏的逻辑
         window.location.href = 'snake_game.html'; // 确保此路径正确
     }
 </script>

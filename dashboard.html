@@ -13,8 +13,32 @@
         <h2>欢迎回来！</h2>
         <p>您已成功登录。</p>
         <button onclick="window.location.href='game.html'">继续</button>
-        <button onclick="window.location.href='login.html';">登出</button>
+        <button onclick="confirmLogout()">注销</button>
     </div>
+
+    <script>
+        function confirmLogout() {
+            if (confirm("您确定要注销吗？")) {
+                logout();
+            }
+        }
+
+        function logout() {
+            // 从 localStorage 中删除用户信息
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+
+            // 过滤掉当前用户
+            const updatedUsers = users.filter(user => user.username !== currentUser.username);
+            localStorage.setItem('users', JSON.stringify(updatedUsers)); // 更新 localStorage
+
+            // 清除当前用户信息
+            localStorage.removeItem('currentUser');
+
+            // 跳转到登录页面
+            window.location.href = 'login.html';
+        }
+    </script>
 </body>
 
 </html>

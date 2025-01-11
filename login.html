@@ -126,7 +126,8 @@
     </div>
 
     <script>
-        let users = [];
+        // 使用 localStorage 模拟数据库
+        const users = JSON.parse(localStorage.getItem('users')) || [];
         let currentUser = null;
 
         document.getElementById('login-form').addEventListener('submit', function(event) {
@@ -136,6 +137,7 @@
             const user = users.find(user => user.username === username && user.password === password);
             if (user) {
                 currentUser = user;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser)); // 保存当前用户
                 window.location.href = 'dashboard.html';
             } else {
                 document.getElementById('login-error').textContent = '无效的用户名或密码';
@@ -151,6 +153,7 @@
                     username,
                     password
                 });
+                localStorage.setItem('users', JSON.stringify(users)); // 保存到 localStorage
                 document.getElementById('register-success').textContent = '注册成功！';
                 setTimeout(() => {
                     document.getElementById('register-success').textContent = '';
@@ -169,11 +172,12 @@
             const newPassword = document.getElementById('new-password').value;
             if (currentUser && currentUser.password === oldPassword) {
                 currentUser.password = newPassword;
-                users = users.map(user =>
-                    user.username === currentUser.username ? {...user,
-                        password: newPassword
-                    } : user
-                );
+                users.forEach(user => {
+                    if (user.username === currentUser.username) {
+                        user.password = newPassword; // 更新密码
+                    }
+                });
+                localStorage.setItem('users', JSON.stringify(users)); // 更新 localStorage
                 document.getElementById('change-password-error').textContent = '密码修改成功';
                 setTimeout(() => {
                     document.getElementById('change-password-error').textContent = '';
@@ -194,6 +198,7 @@
 
         function logout() {
             currentUser = null;
+            localStorage.removeItem('currentUser'); // 清除当前用户信息
             document.getElementById('welcome-container').style.display = 'none';
             document.getElementById('login-container').style.display = 'block';
         }
@@ -201,14 +206,14 @@
         function showRegisterForm() {
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('register-container').style.display = 'block';
-            document.getElementById('login-error').textContent = ''; // Clear login error message
+            document.getElementById('login-error').textContent = ''; // 清除登录错误信息
         }
 
         function showLoginForm() {
             document.getElementById('register-container').style.display = 'none';
             document.getElementById('login-container').style.display = 'block';
-            document.getElementById('register-success').textContent = ''; // Clear registration success message
-            document.getElementById('register-error').textContent = ''; // Clear registration error message
+            document.getElementById('register-success').textContent = ''; // 清除注册成功信息
+            document.getElementById('register-error').textContent = ''; // 清除注册错误信息
         }
 
         function showChangePassword() {
