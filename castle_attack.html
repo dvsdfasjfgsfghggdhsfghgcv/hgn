@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>进攻城堡游戏</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        canvas {
+            background-color: #e0e0e0;
+            display: block;
+        }
+        
+        .info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: black;
+            z-index: 10;
+        }
+        
+        button {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="info">
+        <h2>金钱: <span id="money">0</span></h2>
+        <button id="buySoldier">购买普通士兵 (3金钱)</button>
+        <h3>士兵数量: <span id="soldierCount">0</span></h3>
+        <h3>我方城堡血量: <span id="myCastleHealth1">100</span></h3>
+        <h3>我方城堡血量: <span id="myCastleHealth2">100</span></h3>
+        <h3>我方城堡血量: <span id="myCastleHealth3">100</span></h3>
+        <button id="attack">进攻</button>
+        <button id="defend">防守</button>
+        <button id="retreat">撤退</button>
+        <h3>选择道路:</h3>
+        <button id="road1">1路</button>
+        <button id="road2">2路</button>
+        <button id="road3">3路</button>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 设置画布大小为窗口大小
+        function resizeCanvas() {
+            canvas.width = window.innerWidth; // 设置为窗口的100%
+            canvas.height = window.innerHeight; // 设置为窗口的100%
+        }
+
+        let money = 0;
+        let soldiers = [];
+        const soldierCost = 3;
+        let enemyCastleHealth = [100, 100, 100]; // 每条道路的敌方城堡血量
+        let myCastleHealth = [100, 100, 100]; // 我方城堡的血量，三个城堡
+        let soldierAction = 'defend'; // 士兵的当前状态
+        let selectedRoad = 0; // 选择的道路
+
+        // 敌方相关变量
+        let enemyMoney = 0; // 敌方金币
+        let enemySoldiers = []; // 敌方士兵
+        const enemySoldierCost = 3; // 敌方士兵成本
+
+        // 绘制道路
+        function drawRoad() {
+            ctx.fillStyle = '#8B4513'; // 棕色
+            for (let i = 0; i < 3; i++) {
+                ctx.fillRect(0, (canvas.height / 3) * (i + 1), canvas.width, 20); // 绘制三条道路
+            }
+        }
+
+        // 绘制我方城堡
+        function drawMyCastles() {
+            ctx.fillStyle = 'green'; // 绿色代表我方城堡
+            for (let i = 0; i < 3; i++) {
+                ctx.fillRect(50, (canvas.height / 3) * (i + 1) - 40, 50, 40); // 我方城堡
+                ctx.fillStyle = 'black';
+                ctx.fillText(`血量: ${myCastleHealth[i]}`, 50, (canvas.height / 3) * (i + 1) - 50);
+            }
+        }
+
+        // 绘制敌方城堡
+        function drawEnemyCastles() {
+            ctx.fillStyle = 'red'; // 红色代表敌方城堡
+            for (let i = 0; i < 3; i++) {
+                ctx.fillRect(canvas.width - 100, (canvas.height / 3) * (i + 1) - 40, 50, 40); // 敌方城堡
+                ctx.fillStyle = 'black';
+                ctx.fillText(`血量: ${enemyCastleHealth[i]}`, canvas.width - 100, (canvas.height / 3) * (i + 1) - 50);
+            }
+        }
+
+        // 绘制士兵
+        function drawSoldiers() {
+            ctx.fillStyle = 'blue'; // 蓝色代表我方士兵
+            soldiers.forEach((soldier) => {
+                ctx.fillRect(soldier.x, soldier.y, 20, 20); // 每个士兵为 20x20 的方块
+            });
+
+            ctx.fillStyle = 'orange'; // 橙色代表敌方士兵
+            enemySoldiers.forEach((soldier) => {
+                ctx.fillRect(soldier.x, soldier.y, 20, 20); // 每个敌方士兵为 20x20 的方块
+            });
+        }
+
+        // 更新金钱和士兵数量
+        function update() {
+            // 让士兵根据当前状态进行行动
+            soldiers.forEach((soldier, index) => {
+                if (soldierAction === 'attack') {
+                    if (soldier.x < canvas.width - 100) {
+                        soldier.x += 2; // 士兵向敌方城堡移动
+                    } else {
+                        // 攻击敌方城堡
+                        const roadIndex = Math.floor(soldier.y / (canvas.height / 3)); // 确定士兵在哪条道路
+                        const currentTime = Date.now();
+
+                        // 检查是否可以攻击
+                        if (!soldier.lastAttackTime || currentTime - soldier.lastAttackTime >= 1000) {
+                            enemyCastleHealth[roadIndex]--; // 减少对应道路的敌方城堡血量
+                            soldier.lastAttackTime = currentTime; // 更新最后攻击时间
+                        }
+                    }
+                } else if (soldierAction === 'defend') {
+                    // 士兵待在原地
+                } else if (soldierAction === 'retreat') {
+                    soldier.x -= 2; // 士兵向左撤退
+                    if (soldier.x < 50) { // 撤退到我方城堡位置
+                        soldier.x = 50; // 确保士兵不超过城堡位置
+                        soldiers.splice(index, 1); // 撤退后移除士兵
+                    }
+                }
+            });
+
+            // 检查我方士兵与敌方士兵的碰撞
+            soldiers.forEach((mySoldier, myIndex) => {
+                enemySoldiers.forEach((enemySoldier, enemyIndex) => {
+                    if (mySoldier.x < enemySoldier.x + 20 && mySoldier.x + 20 > enemySoldier.x &&
+                        mySoldier.y < enemySoldier.y + 20 && mySoldier.y + 20 > enemySoldier.y) {
+                        // 互相攻击
+                        mySoldier.attackCount = (mySoldier.attackCount || 0) + 1;
+                        enemySoldier.attackCount = (enemySoldier.attackCount || 0) + 1;
+
+                        // 移除士兵
+                        if (mySoldier.attackCount >= 2) {
+                            soldiers.splice(myIndex, 1); // 移除我方士兵
+                        }
+                        if (enemySoldier.attackCount >= 2) {
+                            enemySoldiers.splice(enemyIndex, 1); // 移除敌方士兵
+                        }
+                    }
+                });
+            });
+
+            // 敌方士兵行为
+            enemySoldiers.forEach((soldier, index) => {
+                if (soldier.x > 50) {
+                    soldier.x -= 2; // 敌方士兵向左进攻
+                } else {
+                    // 攻击我方城堡
+                    const roadIndex = Math.floor(soldier.y / (canvas.height / 3)); // 确定敌方士兵在哪条道路
+                    if (!soldier.lastAttackTime || Date.now() - soldier.lastAttackTime >= 1000) {
+                        myCastleHealth[roadIndex]--; // 减少对应我方城堡的血量
+                        soldier.lastAttackTime = Date.now(); // 更新最后攻击时间
+                    }
+                    enemySoldiers.splice(index, 1); // 敌方士兵到达我方城堡后移除
+                }
+            });
+
+            // 检查敌方城堡是否被摧毁
+            enemyCastleHealth.forEach((health, index) => {
+                if (health <= 0) {
+                    alert(`敌方城堡在第 ${index + 1} 条道路被摧毁！游戏结束！`);
+                    resetGame();
+                }
+            });
+
+            // 检查我方城堡是否被摧毁
+            if (myCastleHealth.some(health => health <= 0)) {
+                alert("我方城堡被摧毁！游戏结束！");
+                resetGame();
+            }
+        }
+
+        // 重置游戏
+        function resetGame() {
+            money = 0;
+            soldiers = [];
+            enemySoldiers = []; // 重置敌方士兵
+            enemyCastleHealth = [100, 100, 100]; // 重置敌方城堡血量
+            myCastleHealth = [100, 100, 100]; // 重置我方城堡血量
+            document.getElementById('money').innerText = money;
+            document.getElementById('soldierCount').innerText = soldiers.length;
+            document.getElementById('myCastleHealth1').innerText = myCastleHealth[0];
+            document.getElementById('myCastleHealth2').innerText = myCastleHealth[1];
+            document.getElementById('myCastleHealth3').innerText = myCastleHealth[2];
+        }
+
+        // 购买士兵
+        document.getElementById('buySoldier').addEventListener('click', function() {
+            if (money >= soldierCost) {
+                money -= soldierCost;
+                soldiers.push({
+                    x: 50, // 士兵的初始位置
+                    y: (canvas.height / 3) * (selectedRoad + 1) - 20, // 根据选择的道路生成士兵
+                    lastAttackTime: null // 初始化最后攻击时间
+                });
+                document.getElementById('soldierCount').innerText = soldiers.length;
+                document.getElementById('money').innerText = money;
+            } else {
+                alert("金钱不足！");
+            }
+        });
+
+        // 敌方生成士兵
+        setInterval(() => {
+            enemyMoney++;
+            if (enemyMoney >= enemySoldierCost) {
+                enemyMoney -= enemySoldierCost;
+                const roadIndex = Math.floor(Math.random() * 3); // 随机选择一条道路
+                enemySoldiers.push({
+                    x: canvas.width - 100, // 敌方士兵的初始位置
+                    y: (canvas.height / 3) * (roadIndex + 1) - 20, // 根据选择的道路生成士兵
+                    lastAttackTime: null // 初始化最后攻击时间
+                });
+            }
+        }, 1500);
+
+        // 进攻按钮
+        document.getElementById('attack').addEventListener('click', function() {
+            soldierAction = 'attack'; // 设置士兵为进攻状态
+        });
+
+        // 防守按钮
+        document.getElementById('defend').addEventListener('click', function() {
+            soldierAction = 'defend'; // 设置士兵为防守状态
+            // 撤退到城堡
+            soldiers.forEach((soldier) => {
+                soldier.x = 50; // 撤退到我方城堡位置
+            });
+        });
+
+        // 撤退按钮
+        document.getElementById('retreat').addEventListener('click', function() {
+            soldierAction = 'retreat'; // 设置士兵为撤退状态
+        });
+
+        // 选择道路按钮
+        document.getElementById('road1').addEventListener('click', function() {
+            selectedRoad = 0; // 选择1路
+        });
+
+        document.getElementById('road2').addEventListener('click', function() {
+            selectedRoad = 1; // 选择2路
+        });
+
+        document.getElementById('road3').addEventListener('click', function() {
+            selectedRoad = 2; // 选择3路
+        });
+
+        // 游戏循环
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawRoad();
+            drawMyCastles(); // 绘制我方城堡
+            drawEnemyCastles(); // 绘制敌方城堡
+            drawSoldiers(); // 绘制士兵
+            update(); // 更新游戏状态
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 每1.5秒获得1金钱
+        setInterval(() => {
+            money++;
+            document.getElementById('money').innerText = money;
+        }, 1500);
+
+        // 启动游戏
+        gameLoop();
+
+        // 窗口大小变化时更新画布大小
+        window.addEventListener('resize', resizeCanvas);
+
+        // 初始化画布大小
+        resizeCanvas();
+    </script>
+</body>
+
+</html>
