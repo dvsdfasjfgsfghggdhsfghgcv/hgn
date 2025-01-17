@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>贪吃蛇游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        
+        canvas {
+            background-color: black;
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1 style="text-align: center;">贪吃蛇游戏</h1>
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let snake = [{
+            x: 10,
+            y: 10
+        }];
+        let food = {
+            x: 15,
+            y: 15
+        };
+        let direction = {
+            x: 1,
+            y: 0
+        }; // 初始方向向右
+        let score = 0;
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // 绘制蛇
+            snake.forEach(part => {
+                ctx.fillStyle = 'green';
+                ctx.fillRect(part.x * 25, part.y * 25, 25, 25);
+            });
+            // 绘制食物
+            ctx.fillStyle = 'red';
+            ctx.fillRect(food.x * 25, food.y * 25, 25, 25);
+            // 绘制得分
+            ctx.fillStyle = 'white';
+            ctx.fillText("得分: " + score, 10, 20);
+        }
+
+        function update() {
+            const head = {...snake[0]
+            }; // 复制蛇头
+            head.x += direction.x;
+            head.y += direction.y;
+
+            // 检查是否撞墙
+            if (head.x < 0 || head.x >= canvas.width / 25 || head.y < 0 || head.y >= canvas.height / 25) {
+                alert("游戏结束！得分: " + score);
+                document.location.reload(); // 重新加载页面
+            }
+
+            // 检查是否撞到自己
+            for (let i = 0; i < snake.length; i++) {
+                if (snake[i].x === head.x && snake[i].y === head.y) {
+                    alert("游戏结束！得分: " + score);
+                    document.location.reload(); // 重新加载页面
+                }
+            }
+
+            snake.unshift(head); // 在蛇头添加新位置
+
+            // 检查是否吃到食物
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                spawnFood(); // 生成新食物
+            } else {
+                snake.pop(); // 移除蛇尾
+            }
+        }
+
+        function spawnFood() {
+            food.x = Math.floor(Math.random() * (canvas.width / 25));
+            food.y = Math.floor(Math.random() * (canvas.height / 25));
+            // 确保食物不生成在蛇身上
+            for (let i = 0; i < snake.length; i++) {
+                if (snake[i].x === food.x && snake[i].y === food.y) {
+                    spawnFood(); // 重新生成食物
+                }
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            setTimeout(gameLoop, 100); // 控制游戏速度
+        }
+
+        // 键盘事件监听
+        document.addEventListener('keydown', (event) => {
+            switch (event.key) {
+                case 'ArrowUp':
+                    if (direction.y === 0) direction = {
+                        x: 0,
+                        y: -1
+                    }; // 向上
+                    break;
+                case 'ArrowDown':
+                    if (direction.y === 0) direction = {
+                        x: 0,
+                        y: 1
+                    }; // 向下
+                    break;
+                case 'ArrowLeft':
+                    if (direction.x === 0) direction = {
+                        x: -1,
+                        y: 0
+                    }; // 向左
+                    break;
+                case 'ArrowRight':
+                    if (direction.x === 0) direction = {
+                        x: 1,
+                        y: 0
+                    }; // 向右
+                    break;
+            }
+        });
+
+        // 启动游戏
+        gameLoop();
+    </script>
+</body>
+
+</html>

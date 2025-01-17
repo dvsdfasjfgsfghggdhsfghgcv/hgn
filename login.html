@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户认证系统</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f9;
+        }
+        
+        .container {
+            width: 300px;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        h2 {
+            margin-bottom: 20px;
+        }
+        
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        input[type="text"],
+        input[type="password"] {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100%;
+        }
+        
+        button {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        .message {
+            margin-top: 10px;
+        }
+        
+        .success {
+            color: green;
+        }
+        
+        .error {
+            color: red;
+        }
+        
+        #welcome-container {
+            width: 400px;
+            padding: 40px;
+            background-color: #d4edda;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        #welcome-message {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="login-container">
+        <h2>登录</h2>
+        <form id="login-form">
+            <input type="text" id="login-username" placeholder="用户名" required>
+            <input type="password" id="login-password" placeholder="密码" required>
+            <button type="submit">登录</button>
+        </form>
+        <p class="message error" id="login-error"></p>
+        <p class="message"><a href="#" onclick="showRegisterForm(); return false;">注册新账号</a></p>
+    </div>
+
+    <div class="container" id="register-container" style="display: none;">
+        <h2>注册</h2>
+        <form id="register-form">
+            <input type="text" id="register-username" placeholder="用户名" required>
+            <input type="password" id="register-password" placeholder="密码" required>
+            <button type="submit">注册</button>
+        </form>
+        <p class="message success" id="register-success"></p>
+        <p class="message error" id="register-error"></p>
+        <p class="message"><a href="#" onclick="showLoginForm(); return false;">返回登录</a></p>
+    </div>
+
+    <div class="container" id="change-password-container" style="display: none;">
+        <h2>修改密码</h2>
+        <form id="change-password-form">
+            <input type="password" id="old-password" placeholder="旧密码" required>
+            <input type="password" id="new-password" placeholder="新密码" required>
+            <button type="submit">修改密码</button>
+        </form>
+        <p class="message error" id="change-password-error"></p>
+        <p class="message"><a href="#" onclick="showWelcomePage(); return false;">返回欢迎页面</a></p>
+    </div>
+
+    <div id="welcome-container" style="display: none;">
+        <h2 id="welcome-message"></h2>
+        <button onclick="showChangePassword()">修改密码</button>
+        <button onclick="logout()">注销</button>
+    </div>
+
+    <script>
+        // 使用 localStorage 模拟数据库
+        const users = JSON.parse(localStorage.getItem('users')) || [];
+        let currentUser = null;
+
+        document.getElementById('login-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            const user = users.find(user => user.username === username && user.password === password);
+            if (user) {
+                currentUser = user;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser)); // 保存当前用户
+                window.location.href = 'dashboard.html';
+            } else {
+                document.getElementById('login-error').textContent = '无效的用户名或密码';
+            }
+        });
+
+        document.getElementById('register-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const username = document.getElementById('register-username').value;
+            const password = document.getElementById('register-password').value;
+            if (!users.find(user => user.username === username)) {
+                users.push({
+                    username,
+                    password
+                });
+                localStorage.setItem('users', JSON.stringify(users)); // 保存到 localStorage
+                document.getElementById('register-success').textContent = '注册成功！';
+                setTimeout(() => {
+                    document.getElementById('register-success').textContent = '';
+                }, 3000);
+                document.getElementById('register-username').value = '';
+                document.getElementById('register-password').value = '';
+                showLoginForm();
+            } else {
+                document.getElementById('register-error').textContent = '用户名已存在';
+            }
+        });
+
+        document.getElementById('change-password-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const oldPassword = document.getElementById('old-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            if (currentUser && currentUser.password === oldPassword) {
+                currentUser.password = newPassword;
+                users.forEach(user => {
+                    if (user.username === currentUser.username) {
+                        user.password = newPassword; // 更新密码
+                    }
+                });
+                localStorage.setItem('users', JSON.stringify(users)); // 更新 localStorage
+                document.getElementById('change-password-error').textContent = '密码修改成功';
+                setTimeout(() => {
+                    document.getElementById('change-password-error').textContent = '';
+                }, 3000);
+                hideChangePassword();
+            } else {
+                document.getElementById('change-password-error').textContent = '旧密码不正确';
+            }
+        });
+
+        function showWelcomePage() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('change-password-container').style.display = 'none';
+            document.getElementById('welcome-container').style.display = 'block';
+            document.getElementById('welcome-message').textContent = `欢迎, ${currentUser.username}`;
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('currentUser'); // 清除当前用户信息
+            document.getElementById('welcome-container').style.display = 'none';
+            document.getElementById('login-container').style.display = 'block';
+        }
+
+        function showRegisterForm() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'block';
+            document.getElementById('login-error').textContent = ''; // 清除登录错误信息
+        }
+
+        function showLoginForm() {
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('login-container').style.display = 'block';
+            document.getElementById('register-success').textContent = ''; // 清除注册成功信息
+            document.getElementById('register-error').textContent = ''; // 清除注册错误信息
+        }
+
+        function showChangePassword() {
+            document.getElementById('welcome-container').style.display = 'none';
+            document.getElementById('change-password-container').style.display = 'block';
+        }
+
+        function hideChangePassword() {
+            document.getElementById('change-password-container').style.display = 'none';
+            document.getElementById('welcome-container').style.display = 'block';
+        }
+    </script>
+</body>
+
+</html>
