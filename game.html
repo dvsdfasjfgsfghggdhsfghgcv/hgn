@@ -43,12 +43,48 @@
             text-decoration: none;
             border-radius: 5px;
         }
+        
+        .scoreboard {
+            width: 300px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .scoreboard h2 {
+            text-align: center;
+            color: #333;
+            cursor: default;
+            text-decoration: none;
+        }
+        
+        .scoreboard ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .scoreboard li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+        }
     </style>
 </head>
 
 <body>
     <h1>游戏</h1>
     <p>欢迎来到游戏界面！在这里您可以开始游戏。</p>
+
+    <!-- 添加兑换奖励按钮 -->
+    <div style="text-align: center; margin: 20px 0;">
+        <button onclick="exchangeReward()" class="button" style="background-color: #ff9800;">
+            兑换奖励 (消耗10积分)
+        </button>
+    </div>
+
     <!-- 添加贪吃蛇游戏名称 -->
     <h2 style="text-align: center;" onclick="startSnakeGame()">贪吃蛇</h2>
     <!-- 超链接重定向到贪吃蛇游戏 -->
@@ -62,6 +98,12 @@
     <!-- 返回按钮 -->
     <a class="button" href="dashboard.html">返回用户仪表盘</a>
     <!-- 这里可以添加更多游戏相关的内容 -->
+
+    <!-- 添加积分排行榜 -->
+    <div class="scoreboard">
+        <h2>积分排行榜</h2>
+        <ul id="scoreList"></ul>
+    </div>
 </body>
 
 <script>
@@ -69,6 +111,66 @@
         // 这里可以添加进入贪吃蛇游戏的逻辑
         window.location.href = 'snake_game.html'; // 确保此路径正确
     }
+
+    function exchangeReward() {
+        // 获取当前用户
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            alert('请先登录！');
+            return;
+        }
+
+        // 获取所有用户
+        const users = JSON.parse(localStorage.getItem('users')) || [];
+        const user = users.find(u => u.username === currentUser.username);
+
+        if (!user) {
+            alert('用户信息不存在！');
+            return;
+        }
+
+        // 检查积分是否足够
+        if (user.score < 10) {
+            alert('积分不足！兑换奖励需要10积分，您当前的积分为：' + user.score);
+            return;
+        }
+
+        // 扣除积分
+        user.score -= 10;
+
+        // 更新localStorage
+        localStorage.setItem('users', JSON.stringify(users));
+
+        // 更新当前用户信息
+        currentUser.score = user.score;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        // 更新积分榜显示
+        updateScoreboard();
+
+        // 显示兑换成功信息
+        alert('兑换成功！已扣除10积分，您当前的积分为：' + user.score);
+    }
+
+    // 获取并显示积分排行榜
+    function updateScoreboard() {
+        const users = JSON.parse(localStorage.getItem('users')) || [];
+        const scoreList = document.getElementById('scoreList');
+
+        // 按积分排序
+        const sortedUsers = users.sort((a, b) => b.score - a.score);
+
+        // 更新显示
+        scoreList.innerHTML = sortedUsers.map((user, index) =>
+            `<li>${index + 1}. ${user.username}: ${user.score}分</li>`
+        ).join('');
+    }
+
+    // 页面加载时更新积分榜
+    updateScoreboard();
+
+    // 每30秒更新一次积分榜
+    setInterval(updateScoreboard, 30000);
 </script>
 
 </html>

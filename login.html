@@ -151,9 +151,10 @@
             if (!users.find(user => user.username === username)) {
                 users.push({
                     username,
-                    password
+                    password,
+                    score: 0 // 确保初始化积分为0
                 });
-                localStorage.setItem('users', JSON.stringify(users)); // 保存到 localStorage
+                localStorage.setItem('users', JSON.stringify(users));
                 document.getElementById('register-success').textContent = '注册成功！';
                 setTimeout(() => {
                     document.getElementById('register-success').textContent = '';

@@ -110,7 +110,7 @@
         function displayUsers() {
             const users = JSON.parse(localStorage.getItem('users')) || [];
             const userList = document.getElementById('user-list');
-            userList.innerHTML = ''; // 清空用户列表
+            userList.innerHTML = '';
 
             if (users.length === 0) {
                 userList.innerHTML = '<p>没有注册用户。</p>';
@@ -118,9 +118,24 @@
             }
 
             users.forEach(user => {
-                userList.innerHTML += `
-                    <p>用户名: ${user.username}, 密码: ${user.password}
-                    <button onclick="logoutUser('${user.username}')">注销用户</button></p>`;
+                const userDiv = document.createElement('div');
+                userDiv.style.marginBottom = '10px';
+                userDiv.style.padding = '10px';
+                userDiv.style.border = '1px solid #ddd';
+                userDiv.style.borderRadius = '5px';
+
+                userDiv.innerHTML = `
+                    <p>
+                        用户名: ${user.username}<br>
+                        密码: ${user.password}<br>
+                        积分: ${user.score || 0}
+                    </p>
+                    <div>
+                        <button onclick="logoutUser('${user.username}')" style="width: auto; margin-right: 10px;">注销用户</button>
+                        <button onclick="addScore('${user.username}')" style="width: auto;">增加积分</button>
+                    </div>
+                `;
+                userList.appendChild(userDiv);
             });
         }
 
@@ -141,6 +156,26 @@
                 displayUsers(); // 更新用户列表
             }
         }
+
+        function addScore(username) {
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const user = users.find(u => u.username === username);
+            if (user) {
+                user.score = (user.score || 0) + 1;
+                localStorage.setItem('users', JSON.stringify(users));
+                displayUsers();
+                alert(`已为用户 ${username} 添加1积分`);
+            }
+        }
+
+        // 确保页面加载时显示用户列表
+        window.onload = function() {
+            // 检查是否应该显示管理面板
+            const adminContainer = document.getElementById('admin-container');
+            if (adminContainer.style.display === 'block') {
+                displayUsers();
+            }
+        };
     </script>
 </body>
 

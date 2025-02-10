@@ -41,6 +41,10 @@ let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
 let currentTetromino;
 let currentPosition;
 
+// 在文件开头添加计时和积分变量
+let gameStartTime = Date.now();
+let scoreAdded = false;
+
 // 随机生成方块
 function randomTetromino() {
     const index = Math.floor(Math.random() * TETROMINOS.length);
@@ -158,6 +162,27 @@ function gameLoop() {
     update();
     setTimeout(gameLoop, 500); // 每 500 毫秒更新一次
 }
+
+// 在gameLoop函数之前添加积分检查
+// 每分钟检查游戏时间并更新积分
+setInterval(() => {
+    const playTime = Math.floor((Date.now() - gameStartTime) / (1000 * 60)); // 转换为分钟
+    if (playTime >= 10 && !scoreAdded) {
+        // 获取当前用户
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (currentUser) {
+            // 更新用户积分
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const user = users.find(u => u.username === currentUser.username);
+            if (user) {
+                user.score = (user.score || 0) + 1;
+                localStorage.setItem('users', JSON.stringify(users));
+                scoreAdded = true;
+                alert('恭喜获得1积分！');
+            }
+        }
+    }
+}, 60000); // 每分钟检查一次
 
 // 初始化游戏
 currentTetromino = randomTetromino();
