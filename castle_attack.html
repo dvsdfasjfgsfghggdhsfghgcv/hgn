@@ -341,26 +341,35 @@
             archers.forEach((archer, index) => {
                 if (soldierAction === 'attack') {
                     // 获取最前线的近战单位位置
-                    let frontLineX = 50; // 默认位置
+                    let frontLineX = archer.x; // 改为使用弓箭手当前位置作为默认值
+                    let hasNearbyUnits = false;
+
                     soldiers.forEach(soldier => {
                         if (Math.abs(soldier.y - archer.y) < 30) { // 同一条路上的士兵
                             frontLineX = Math.max(frontLineX, soldier.x);
+                            hasNearbyUnits = true;
                         }
                     });
                     warriors.forEach(warrior => {
                         if (Math.abs(warrior.y - archer.y) < 30) { // 同一条路上的战士
                             frontLineX = Math.max(frontLineX, warrior.x);
+                            hasNearbyUnits = true;
                         }
                     });
 
-                    // 弓箭手保持在近战单位后方50像素
-                    const targetX = Math.min(frontLineX - 50, canvas.width - 150);
-
-                    // 平滑移动到目标位置
-                    if (archer.x < targetX - 2) {
-                        archer.x += 2;
-                    } else if (archer.x > targetX + 2) {
-                        archer.x -= 2;
+                    if (!hasNearbyUnits) {
+                        // 如果没有近战单位，弓箭手自己前进
+                        if (archer.x < canvas.width - 250) { // 保持在射程范围内
+                            archer.x += 2;
+                        }
+                    } else {
+                        // 有近战单位时，保持在其后方
+                        const targetX = Math.min(frontLineX - 50, canvas.width - 250);
+                        if (archer.x < targetX - 2) {
+                            archer.x += 2;
+                        } else if (archer.x > targetX + 2) {
+                            archer.x -= 2;
+                        }
                     }
 
                     // 在射程内时攻击敌方城堡
@@ -424,31 +433,39 @@
                 });
             });
 
-            // 敌方弓箭手的移动和攻击逻辑也需要类似的更新
+            // 敌方弓箭手的逻辑也需要类似的更新
             enemyArchers.forEach((archer, index) => {
-                // 获取敌方最前线的近战单位位置
-                let frontLineX = canvas.width - 100;
+                let frontLineX = archer.x;
+                let hasNearbyUnits = false;
+
                 enemySoldiers.forEach(soldier => {
                     if (Math.abs(soldier.y - archer.y) < 30) {
                         frontLineX = Math.min(frontLineX, soldier.x);
+                        hasNearbyUnits = true;
                     }
                 });
                 enemyWarriors.forEach(warrior => {
                     if (Math.abs(warrior.y - archer.y) < 30) {
                         frontLineX = Math.min(frontLineX, warrior.x);
+                        hasNearbyUnits = true;
                     }
                 });
 
-                // 保持在近战单位后方50像素
-                const targetX = Math.max(frontLineX + 50, 150);
-
-                if (archer.x > targetX + 2) {
-                    archer.x -= 2;
-                } else if (archer.x < targetX - 2) {
-                    archer.x += 2;
+                if (!hasNearbyUnits) {
+                    // 如果没有近战单位，敌方弓箭手自己前进
+                    if (archer.x > 150) { // 保持在射程范围内
+                        archer.x -= 2;
+                    }
+                } else {
+                    // 有近战单位时，保持在其后方
+                    const targetX = Math.max(frontLineX + 50, 150);
+                    if (archer.x > targetX + 2) {
+                        archer.x -= 2;
+                    } else if (archer.x < targetX - 2) {
+                        archer.x += 2;
+                    }
                 }
 
-                // 其余的攻击逻辑保持不变
                 // ... existing enemy archer attack code ...
             });
         }
