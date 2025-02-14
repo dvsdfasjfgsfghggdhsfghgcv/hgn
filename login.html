@@ -137,8 +137,9 @@
             const user = users.find(user => user.username === username && user.password === password);
             if (user) {
                 currentUser = user;
-                localStorage.setItem('currentUser', JSON.stringify(currentUser)); // 保存当前用户
-                window.location.href = 'dashboard.html';
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                localStorage.setItem('isLoggedIn', 'true'); // 添加登录状态标记
+                window.location.href = 'game.html';
             } else {
                 document.getElementById('login-error').textContent = '无效的用户名或密码';
             }
@@ -199,9 +200,9 @@
 
         function logout() {
             currentUser = null;
-            localStorage.removeItem('currentUser'); // 清除当前用户信息
-            document.getElementById('welcome-container').style.display = 'none';
-            document.getElementById('login-container').style.display = 'block';
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('isLoggedIn'); // 移除登录状态标记
+            window.location.href = 'login.html';
         }
 
         function showRegisterForm() {

@@ -58,6 +58,21 @@
 </head>
 
 <body>
+    <script>
+        // 添加登录检查
+        function checkLogin() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            if (!isLoggedIn) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            return true;
+        }
+
+        if (!checkLogin()) {
+            throw new Error('未登录');
+        }
+    </script>
     <div class="login-container">
         <h2>欢迎回来！</h2>
         <p>您已成功登录。</p>

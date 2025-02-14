@@ -38,6 +38,20 @@
     <canvas id="gameCanvas" width="600" height="400"></canvas>
     <a class="button" href="game.html">返回游戏选择</a>
     <script>
+        // 添加登录检查
+        function checkLogin() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            if (!isLoggedIn) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            return true;
+        }
+
+        if (!checkLogin()) {
+            throw new Error('未登录');
+        }
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 

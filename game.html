@@ -107,6 +107,20 @@
 </body>
 
 <script>
+    // 添加登录检查
+    function checkLogin() {
+        const isLoggedIn = localStorage.getItem('isLoggedIn');
+        if (!isLoggedIn) {
+            window.location.href = 'login.html';
+            return false;
+        }
+        return true;
+    }
+
+    if (!checkLogin()) {
+        throw new Error('未登录');
+    }
+
     function startSnakeGame() {
         // 这里可以添加进入贪吃蛇游戏的逻辑
         window.location.href = 'snake_game.html'; // 确保此路径正确

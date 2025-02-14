@@ -23,6 +23,21 @@
 
 <body>
     <canvas id="tetris" width="300" height="600"></canvas>
+    <script>
+        // 添加登录检查
+        function checkLogin() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            if (!isLoggedIn) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            return true;
+        }
+
+        if (!checkLogin()) {
+            throw new Error('未登录');
+        }
+    </script>
     <script src="tetris.js"></script>
 </body>
 

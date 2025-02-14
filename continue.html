@@ -9,6 +9,21 @@
 </head>
 
 <body>
+    <script>
+        // 添加登录检查
+        function checkLogin() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            if (!isLoggedIn) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            return true;
+        }
+
+        if (!checkLogin()) {
+            throw new Error('未登录');
+        }
+    </script>
     <div class="login-container" style="width: 400px; margin-top: 50px;">
         <h2>继续页面</h2>
         <p>这是您可以继续操作的页面。</p>

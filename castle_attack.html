@@ -63,6 +63,21 @@
     <canvas id="gameCanvas"></canvas>
 
     <script>
+        // 添加在脚本最开始处
+        function checkLogin() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            if (!isLoggedIn) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            return true;
+        }
+
+        // 页面加载时检查登录状态
+        if (!checkLogin()) {
+            throw new Error('未登录');
+        }
+
         // 在开头添加计时和积分变量
         let gameStartTime = Date.now();
         let scoreAdded = false;

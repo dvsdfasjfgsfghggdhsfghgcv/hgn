@@ -25,6 +25,20 @@
     <h1 style="text-align: center;">贪吃蛇游戏</h1>
     <canvas id="gameCanvas" width="600" height="600"></canvas>
     <script>
+        // 添加登录检查
+        function checkLogin() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            if (!isLoggedIn) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            return true;
+        }
+
+        if (!checkLogin()) {
+            throw new Error('未登录');
+        }
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
