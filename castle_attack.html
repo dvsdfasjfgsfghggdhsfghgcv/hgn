@@ -44,7 +44,11 @@
     <div class="info">
         <h2>金钱: <span id="money">0</span></h2>
         <button id="buySoldier">购买普通士兵 (3金钱)</button>
+        <button id="buyWarrior">购买战士 (10金钱)</button>
+        <button id="buyArcher">购买弓箭手 (5金钱)</button>
         <h3>士兵数量: <span id="soldierCount">0</span></h3>
+        <h3>战士数量: <span id="warriorCount">0</span></h3>
+        <h3>弓箭手数量: <span id="archerCount">0</span></h3>
         <h3>我方城堡血量: <span id="myCastleHealth1">100</span></h3>
         <h3>我方城堡血量: <span id="myCastleHealth2">100</span></h3>
         <h3>我方城堡血量: <span id="myCastleHealth3">100</span></h3>
@@ -85,6 +89,18 @@
         let enemySoldiers = []; // 敌方士兵
         const enemySoldierCost = 3; // 敌方士兵成本
 
+        let warriors = []; // 新增战士数组
+        const warriorCost = 10; // 战士成本
+
+        // 添加敌方战士相关变量
+        let enemyWarriors = []; // 敌方战士数组
+        const enemyWarriorCost = 10; // 敌方战士成本
+
+        // 添加弓箭手相关变量
+        let archers = []; // 我方弓箭手数组
+        let enemyArchers = []; // 敌方弓箭手数组
+        const archerCost = 5; // 弓箭手成本
+
         // 绘制道路
         function drawRoad() {
             ctx.fillStyle = '#8B4513'; // 棕色
@@ -115,20 +131,40 @@
 
         // 绘制士兵
         function drawSoldiers() {
-            ctx.fillStyle = 'blue'; // 蓝色代表我方士兵
+            ctx.fillStyle = 'blue'; // 蓝色代表普通士兵
             soldiers.forEach((soldier) => {
-                ctx.fillRect(soldier.x, soldier.y, 20, 20); // 每个士兵为 20x20 的方块
+                ctx.fillRect(soldier.x, soldier.y, 20, 20);
+            });
+
+            ctx.fillStyle = 'purple'; // 紫色代表战士
+            warriors.forEach((warrior) => {
+                ctx.fillRect(warrior.x, warrior.y, 20, 20);
             });
 
             ctx.fillStyle = 'orange'; // 橙色代表敌方士兵
             enemySoldiers.forEach((soldier) => {
-                ctx.fillRect(soldier.x, soldier.y, 20, 20); // 每个敌方士兵为 20x20 的方块
+                ctx.fillRect(soldier.x, soldier.y, 20, 20);
+            });
+
+            ctx.fillStyle = 'darkred'; // 深红色代表敌方战士
+            enemyWarriors.forEach((warrior) => {
+                ctx.fillRect(warrior.x, warrior.y, 20, 20);
+            });
+
+            ctx.fillStyle = 'green'; // 绿色代表弓箭手
+            archers.forEach((archer) => {
+                ctx.fillRect(archer.x, archer.y, 20, 20);
+            });
+
+            ctx.fillStyle = 'yellow'; // 黄色代表敌方弓箭手
+            enemyArchers.forEach((archer) => {
+                ctx.fillRect(archer.x, archer.y, 20, 20);
             });
         }
 
         // 更新金钱和士兵数量
         function update() {
-            // 让士兵根据当前状态进行行动
+            // 更新普通士兵
             soldiers.forEach((soldier, index) => {
                 if (soldierAction === 'attack') {
                     if (soldier.x < canvas.width - 100) {
@@ -155,38 +191,135 @@
                 }
             });
 
-            // 检查我方士兵与敌方士兵的碰撞
+            // 更新战士
+            warriors.forEach((warrior, index) => {
+                if (soldierAction === 'attack') {
+                    if (warrior.x < canvas.width - 100) {
+                        warrior.x += 2; // 战士向敌方城堡移动
+                    } else {
+                        const roadIndex = Math.floor(warrior.y / (canvas.height / 3));
+                        const currentTime = Date.now();
+                        if (!warrior.lastAttackTime || currentTime - warrior.lastAttackTime >= 1000) {
+                            enemyCastleHealth[roadIndex] -= 2; // 战士造成双倍伤害
+                            warrior.lastAttackTime = currentTime;
+                        }
+                    }
+                } else if (soldierAction === 'defend') {
+                    // 战士待在原地
+                } else if (soldierAction === 'retreat') {
+                    warrior.x -= 2;
+                    if (warrior.x < 50) {
+                        warrior.x = 50;
+                        warriors.splice(index, 1);
+                    }
+                }
+            });
+
+            // 检查我方单位与敌方士兵的碰撞
+            // 普通士兵碰撞检测
             soldiers.forEach((mySoldier, myIndex) => {
                 enemySoldiers.forEach((enemySoldier, enemyIndex) => {
                     if (mySoldier.x < enemySoldier.x + 20 && mySoldier.x + 20 > enemySoldier.x &&
                         mySoldier.y < enemySoldier.y + 20 && mySoldier.y + 20 > enemySoldier.y) {
-                        // 互相攻击
                         mySoldier.attackCount = (mySoldier.attackCount || 0) + 1;
                         enemySoldier.attackCount = (enemySoldier.attackCount || 0) + 1;
 
-                        // 移除士兵
                         if (mySoldier.attackCount >= 2) {
-                            soldiers.splice(myIndex, 1); // 移除我方士兵
+                            soldiers.splice(myIndex, 1);
                         }
                         if (enemySoldier.attackCount >= 2) {
-                            enemySoldiers.splice(enemyIndex, 1); // 移除敌方士兵
+                            enemySoldiers.splice(enemyIndex, 1);
                         }
                     }
                 });
             });
 
-            // 敌方士兵行为
+            // 战士碰撞检测
+            warriors.forEach((warrior, warriorIndex) => {
+                enemySoldiers.forEach((enemySoldier, enemyIndex) => {
+                    if (warrior.x < enemySoldier.x + 20 && warrior.x + 20 > enemySoldier.x &&
+                        warrior.y < enemySoldier.y + 20 && warrior.y + 20 > enemySoldier.y) {
+                        warrior.attackCount = (warrior.attackCount || 0) + 1;
+                        enemySoldier.attackCount = (enemySoldier.attackCount || 0) + 1;
+
+                        if (warrior.attackCount >= 5) { // 战士需要被打5次才会死
+                            warriors.splice(warriorIndex, 1);
+                        }
+                        if (enemySoldier.attackCount >= 2) {
+                            enemySoldiers.splice(enemyIndex, 1);
+                        }
+                    }
+                });
+            });
+
+            // 检查我方单位与敌方战士的碰撞
+            soldiers.forEach((mySoldier, myIndex) => {
+                enemyWarriors.forEach((enemyWarrior, enemyIndex) => {
+                    if (mySoldier.x < enemyWarrior.x + 20 && mySoldier.x + 20 > enemyWarrior.x &&
+                        mySoldier.y < enemyWarrior.y + 20 && mySoldier.y + 20 > enemyWarrior.y) {
+                        mySoldier.attackCount = (mySoldier.attackCount || 0) + 1;
+                        enemyWarrior.attackCount = (enemyWarrior.attackCount || 0) + 1;
+
+                        if (mySoldier.attackCount >= 2) {
+                            soldiers.splice(myIndex, 1);
+                        }
+                        if (enemyWarrior.attackCount >= 5) { // 敌方战士也需要5次攻击才会死
+                            enemyWarriors.splice(enemyIndex, 1);
+                        }
+                    }
+                });
+            });
+
+            // 我方战士与敌方战士的碰撞
+            warriors.forEach((warrior, warriorIndex) => {
+                enemyWarriors.forEach((enemyWarrior, enemyIndex) => {
+                    if (warrior.x < enemyWarrior.x + 20 && warrior.x + 20 > enemyWarrior.x &&
+                        warrior.y < enemyWarrior.y + 20 && warrior.y + 20 > enemyWarrior.y) {
+                        warrior.attackCount = (warrior.attackCount || 0) + 1;
+                        enemyWarrior.attackCount = (enemyWarrior.attackCount || 0) + 1;
+
+                        if (warrior.attackCount >= 5) {
+                            warriors.splice(warriorIndex, 1);
+                        }
+                        if (enemyWarrior.attackCount >= 5) {
+                            enemyWarriors.splice(enemyIndex, 1);
+                        }
+                    }
+                });
+            });
+
+            // 添加敌方士兵的移动和攻击逻辑
             enemySoldiers.forEach((soldier, index) => {
-                if (soldier.x > 50) {
-                    soldier.x -= 2; // 敌方士兵向左进攻
+                if (soldier.x > 100) { // 如果还没到达我方城堡
+                    soldier.x -= 2; // 向我方城堡移动
                 } else {
                     // 攻击我方城堡
-                    const roadIndex = Math.floor(soldier.y / (canvas.height / 3)); // 确定敌方士兵在哪条道路
-                    if (!soldier.lastAttackTime || Date.now() - soldier.lastAttackTime >= 1000) {
-                        myCastleHealth[roadIndex]--; // 减少对应我方城堡的血量
-                        soldier.lastAttackTime = Date.now(); // 更新最后攻击时间
+                    const roadIndex = Math.floor(soldier.y / (canvas.height / 3)); // 确定士兵在哪条道路
+                    const currentTime = Date.now();
+
+                    // 检查是否可以攻击
+                    if (!soldier.lastAttackTime || currentTime - soldier.lastAttackTime >= 1000) {
+                        myCastleHealth[roadIndex]--; // 减少对应道路的我方城堡血量
+                        soldier.lastAttackTime = currentTime; // 更新最后攻击时间
+
+                        // 更新显示的城堡血量
+                        document.getElementById(`myCastleHealth${roadIndex + 1}`).innerText = myCastleHealth[roadIndex];
                     }
-                    enemySoldiers.splice(index, 1); // 敌方士兵到达我方城堡后移除
+                }
+            });
+
+            // 添加敌方战士的移动和攻击逻辑
+            enemyWarriors.forEach((warrior, index) => {
+                if (warrior.x > 100) {
+                    warrior.x -= 2; // 向我方城堡移动
+                } else {
+                    const roadIndex = Math.floor(warrior.y / (canvas.height / 3));
+                    const currentTime = Date.now();
+                    if (!warrior.lastAttackTime || currentTime - warrior.lastAttackTime >= 1000) {
+                        myCastleHealth[roadIndex] -= 2; // 敌方战士也造成双倍伤害
+                        warrior.lastAttackTime = currentTime;
+                        document.getElementById(`myCastleHealth${roadIndex + 1}`).innerText = myCastleHealth[roadIndex];
+                    }
                 }
             });
 
@@ -203,17 +336,138 @@
                 alert("我方城堡被摧毁！游戏结束！");
                 resetGame();
             }
+
+            // 更新弓箭手
+            archers.forEach((archer, index) => {
+                if (soldierAction === 'attack') {
+                    // 获取最前线的近战单位位置
+                    let frontLineX = 50; // 默认位置
+                    soldiers.forEach(soldier => {
+                        if (Math.abs(soldier.y - archer.y) < 30) { // 同一条路上的士兵
+                            frontLineX = Math.max(frontLineX, soldier.x);
+                        }
+                    });
+                    warriors.forEach(warrior => {
+                        if (Math.abs(warrior.y - archer.y) < 30) { // 同一条路上的战士
+                            frontLineX = Math.max(frontLineX, warrior.x);
+                        }
+                    });
+
+                    // 弓箭手保持在近战单位后方50像素
+                    const targetX = Math.min(frontLineX - 50, canvas.width - 150);
+
+                    // 平滑移动到目标位置
+                    if (archer.x < targetX - 2) {
+                        archer.x += 2;
+                    } else if (archer.x > targetX + 2) {
+                        archer.x -= 2;
+                    }
+
+                    // 在射程内时攻击敌方城堡
+                    if (archer.x >= canvas.width - 250) {
+                        const roadIndex = Math.floor(archer.y / (canvas.height / 3));
+                        const currentTime = Date.now();
+                        if (!archer.lastAttackTime || currentTime - archer.lastAttackTime >= 1500) {
+                            enemyCastleHealth[roadIndex]--;
+                            archer.lastAttackTime = currentTime;
+                        }
+                    }
+                } else if (soldierAction === 'defend') {
+                    // 防守时也要保持在近战单位后方
+                    let frontLineX = 50;
+                    soldiers.forEach(soldier => {
+                        if (Math.abs(soldier.y - archer.y) < 30) {
+                            frontLineX = Math.max(frontLineX, soldier.x);
+                        }
+                    });
+                    warriors.forEach(warrior => {
+                        if (Math.abs(warrior.y - archer.y) < 30) {
+                            frontLineX = Math.max(frontLineX, warrior.x);
+                        }
+                    });
+
+                    const targetX = frontLineX - 50;
+                    if (archer.x < targetX - 2) {
+                        archer.x += 2;
+                    } else if (archer.x > targetX + 2) {
+                        archer.x -= 2;
+                    }
+                } else if (soldierAction === 'retreat') {
+                    archer.x -= 2;
+                    if (archer.x < 50) {
+                        archer.x = 50;
+                        archers.splice(index, 1);
+                    }
+                }
+            });
+
+            // 弓箭手与敌方普通士兵的碰撞
+            archers.forEach((archer, archerIndex) => {
+                enemySoldiers.forEach((enemySoldier, enemyIndex) => {
+                    if (Math.abs(archer.x - enemySoldier.x) < 100 && // 弓箭手攻击范围
+                        Math.abs(archer.y - enemySoldier.y) < 20) {
+                        enemySoldiers.splice(enemyIndex, 1); // 一击必杀普通士兵
+                    }
+                });
+            });
+
+            // 弓箭手与敌方战士的碰撞
+            archers.forEach((archer, archerIndex) => {
+                enemyWarriors.forEach((enemyWarrior, enemyIndex) => {
+                    if (Math.abs(archer.x - enemyWarrior.x) < 100 &&
+                        Math.abs(archer.y - enemyWarrior.y) < 20) {
+                        enemyWarrior.archerHits = (enemyWarrior.archerHits || 0) + 1;
+                        if (enemyWarrior.archerHits >= 3) { // 需要3次攻击才能击杀战士
+                            enemyWarriors.splice(enemyIndex, 1);
+                        }
+                    }
+                });
+            });
+
+            // 敌方弓箭手的移动和攻击逻辑也需要类似的更新
+            enemyArchers.forEach((archer, index) => {
+                // 获取敌方最前线的近战单位位置
+                let frontLineX = canvas.width - 100;
+                enemySoldiers.forEach(soldier => {
+                    if (Math.abs(soldier.y - archer.y) < 30) {
+                        frontLineX = Math.min(frontLineX, soldier.x);
+                    }
+                });
+                enemyWarriors.forEach(warrior => {
+                    if (Math.abs(warrior.y - archer.y) < 30) {
+                        frontLineX = Math.min(frontLineX, warrior.x);
+                    }
+                });
+
+                // 保持在近战单位后方50像素
+                const targetX = Math.max(frontLineX + 50, 150);
+
+                if (archer.x > targetX + 2) {
+                    archer.x -= 2;
+                } else if (archer.x < targetX - 2) {
+                    archer.x += 2;
+                }
+
+                // 其余的攻击逻辑保持不变
+                // ... existing enemy archer attack code ...
+            });
         }
 
         // 重置游戏
         function resetGame() {
             money = 0;
             soldiers = [];
+            warriors = []; // 重置战士数组
             enemySoldiers = []; // 重置敌方士兵
             enemyCastleHealth = [100, 100, 100]; // 重置敌方城堡血量
             myCastleHealth = [100, 100, 100]; // 重置我方城堡血量
+            enemyWarriors = []; // 重置敌方战士
+            archers = [];
+            enemyArchers = [];
             document.getElementById('money').innerText = money;
             document.getElementById('soldierCount').innerText = soldiers.length;
+            document.getElementById('warriorCount').innerText = warriors.length;
+            document.getElementById('archerCount').innerText = archers.length;
             document.getElementById('myCastleHealth1').innerText = myCastleHealth[0];
             document.getElementById('myCastleHealth2').innerText = myCastleHealth[1];
             document.getElementById('myCastleHealth3').innerText = myCastleHealth[2];
@@ -235,16 +489,68 @@
             }
         });
 
+        // 购买战士
+        document.getElementById('buyWarrior').addEventListener('click', function() {
+            if (money >= warriorCost) {
+                money -= warriorCost;
+                warriors.push({
+                    x: 50,
+                    y: (canvas.height / 3) * (selectedRoad + 1) - 20,
+                    lastAttackTime: null,
+                    attackCount: 0
+                });
+                document.getElementById('warriorCount').innerText = warriors.length;
+                document.getElementById('money').innerText = money;
+            } else {
+                alert("金钱不足！");
+            }
+        });
+
+        // 购买弓箭手
+        document.getElementById('buyArcher').addEventListener('click', function() {
+            if (money >= archerCost) {
+                money -= archerCost;
+                archers.push({
+                    x: 50,
+                    y: (canvas.height / 3) * (selectedRoad + 1) - 20,
+                    lastAttackTime: null
+                });
+                document.getElementById('archerCount').innerText = archers.length;
+                document.getElementById('money').innerText = money;
+            } else {
+                alert("金钱不足！");
+            }
+        });
+
         // 敌方生成士兵
         setInterval(() => {
             enemyMoney++;
-            if (enemyMoney >= enemySoldierCost) {
+            const random = Math.random();
+            if (enemyMoney >= enemyWarriorCost && random < 0.2) { // 20%概率购买战士
+                enemyMoney -= enemyWarriorCost;
+                const roadIndex = Math.floor(Math.random() * 3);
+                enemyWarriors.push({
+                    x: canvas.width - 100,
+                    y: (canvas.height / 3) * (roadIndex + 1) - 20,
+                    lastAttackTime: null,
+                    attackCount: 0
+                });
+            } else if (enemyMoney >= archerCost && random < 0.5) { // 30%概率购买弓箭手
+                enemyMoney -= archerCost;
+                const roadIndex = Math.floor(Math.random() * 3);
+                enemyArchers.push({
+                    x: canvas.width - 100,
+                    y: (canvas.height / 3) * (roadIndex + 1) - 20,
+                    lastAttackTime: null
+                });
+            } else if (enemyMoney >= enemySoldierCost) { // 50%概率购买普通士兵
                 enemyMoney -= enemySoldierCost;
-                const roadIndex = Math.floor(Math.random() * 3); // 随机选择一条道路
+                const roadIndex = Math.floor(Math.random() * 3);
                 enemySoldiers.push({
-                    x: canvas.width - 100, // 敌方士兵的初始位置
-                    y: (canvas.height / 3) * (roadIndex + 1) - 20, // 根据选择的道路生成士兵
-                    lastAttackTime: null // 初始化最后攻击时间
+                    x: canvas.width - 100,
+                    y: (canvas.height / 3) * (roadIndex + 1) - 20,
+                    lastAttackTime: null,
+                    attackCount: 0
                 });
             }
         }, 1500);
