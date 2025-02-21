@@ -132,14 +132,12 @@
     }
 
     function exchangeReward() {
-        // 获取当前用户
         const currentUser = JSON.parse(localStorage.getItem('currentUser'));
         if (!currentUser) {
             alert('请先登录！');
             return;
         }
 
-        // 获取所有用户
         const users = JSON.parse(localStorage.getItem('users')) || [];
         const user = users.find(u => u.username === currentUser.username);
 
@@ -148,27 +146,55 @@
             return;
         }
 
-        // 检查积分是否足够
-        if (user.score < 10) {
-            alert('积分不足！兑换奖励需要10积分，您当前的积分为：' + user.score);
+        // 创建药水选择对话框
+        const potionType = prompt(
+            "请选择要兑换的奖励类型：\n" +
+            "1. 力量药水（10积分）- 提高攻击力\n" +
+            "2. 速度药水（10积分）- 提高移动速度\n" +
+            "3. 治疗药水（10积分）- 恢复城堡生命值\n" +
+            "4. 黄金战士（20积分）- 召唤一个强大的黄金战士\n" +
+            "请输入数字1-4："
+        );
+
+        if (!potionType || !["1", "2", "3", "4"].includes(potionType)) {
+            alert('无效的选择！');
             return;
         }
 
-        // 扣除积分
-        user.score -= 10;
+        // 检查积分是否足够
+        const cost = potionType === "4" ? 20 : 10;
+        if (user.score < cost) {
+            alert(`积分不足！兑换奖励需要${cost}积分，您当前的积分为：${user.score}`);
+            return;
+        }
+
+        // 扣除积分并添加道具
+        user.score -= cost;
+        user.potions = user.potions || {};
+
+        switch (potionType) {
+            case "1":
+                user.potions.strength = (user.potions.strength || 0) + 1;
+                alert('成功兑换力量药水！');
+                break;
+            case "2":
+                user.potions.speed = (user.potions.speed || 0) + 1;
+                alert('成功兑换速度药水！');
+                break;
+            case "3":
+                user.potions.healing = (user.potions.healing || 0) + 1;
+                alert('成功兑换治疗药水！');
+                break;
+            case "4":
+                user.potions.goldenWarrior = (user.potions.goldenWarrior || 0) + 1;
+                alert('成功兑换黄金战士！');
+                break;
+        }
 
         // 更新localStorage
         localStorage.setItem('users', JSON.stringify(users));
-
-        // 更新当前用户信息
-        currentUser.score = user.score;
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-
-        // 更新积分榜显示
+        localStorage.setItem('currentUser', JSON.stringify(user));
         updateScoreboard();
-
-        // 显示兑换成功信息
-        alert('兑换成功！已扣除10积分，您当前的积分为：' + user.score);
     }
 
     // 获取并显示积分排行榜

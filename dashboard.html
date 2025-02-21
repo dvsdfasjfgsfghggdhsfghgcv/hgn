@@ -83,6 +83,17 @@
 
     <div class="admin-container" id="admin-container" style="display: none;">
         <h2>后台管理系统</h2>
+
+        <!-- 添加积分管理区域 -->
+        <div style="margin: 20px 0; padding: 15px; background-color: #fff; border-radius: 5px;">
+            <h3>积分管理</h3>
+            <div style="display: flex; margin-bottom: 10px;">
+                <input type="text" id="scoreUsername" placeholder="输入用户名" style="flex: 1; padding: 8px; margin-right: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                <input type="number" id="scoreAmount" placeholder="积分数量" style="width: 100px; padding: 8px; margin-right: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                <button onclick="addScoreToUser()" style="width: auto;">添加积分</button>
+            </div>
+        </div>
+
         <div class="user-list" id="user-list"></div>
         <button onclick="logoutAll()">注销所有用户</button>
         <button onclick="hideAdminPanel()">返回</button>
@@ -147,7 +158,8 @@
                     </p>
                     <div>
                         <button onclick="logoutUser('${user.username}')" style="width: auto; margin-right: 10px;">注销用户</button>
-                        <button onclick="addScore('${user.username}')" style="width: auto;">增加积分</button>
+                        <button onclick="addScore('${user.username}')" style="width: auto; margin-right: 10px;">增加积分</button>
+                        <button onclick="addCustomScore('${user.username}')" style="width: auto;">自定义积分</button>
                     </div>
                 `;
                 userList.appendChild(userDiv);
@@ -181,6 +193,71 @@
                 displayUsers();
                 alert(`已为用户 ${username} 添加1积分`);
             }
+        }
+
+        function addCustomScore(username) {
+            const scoreToAdd = prompt(`请输入要为用户 ${username} 添加的积分数量：`);
+
+            // 验证输入是否为有效数字
+            if (scoreToAdd === null || scoreToAdd === '') {
+                return; // 用户取消或未输入
+            }
+
+            const scoreNum = parseInt(scoreToAdd);
+            if (isNaN(scoreNum)) {
+                alert('请输入有效的数字！');
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const user = users.find(u => u.username === username);
+            if (user) {
+                user.score = (user.score || 0) + scoreNum;
+                localStorage.setItem('users', JSON.stringify(users));
+                displayUsers();
+                alert(`已为用户 ${username} 添加${scoreNum}积分`);
+            }
+        }
+
+        // 添加新的积分管理函数
+        function addScoreToUser() {
+            const username = document.getElementById('scoreUsername').value;
+            const scoreAmount = parseInt(document.getElementById('scoreAmount').value);
+
+            if (!username) {
+                alert('请输入用户名！');
+                return;
+            }
+
+            if (isNaN(scoreAmount)) {
+                alert('请输入有效的积分数量！');
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const user = users.find(u => u.username === username);
+
+            if (!user) {
+                alert('找不到该用户！');
+                return;
+            }
+
+            user.score = (user.score || 0) + scoreAmount;
+            localStorage.setItem('users', JSON.stringify(users));
+
+            // 如果是当前用户，也更新currentUser
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser && currentUser.username === username) {
+                currentUser.score = user.score;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            }
+
+            displayUsers();
+            alert(`已为用户 ${username} 添加 ${scoreAmount} 积分！`);
+
+            // 清空输入框
+            document.getElementById('scoreUsername').value = '';
+            document.getElementById('scoreAmount').value = '';
         }
 
         // 确保页面加载时显示用户列表
