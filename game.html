@@ -112,16 +112,18 @@
 </body>
 
 <script>
-    // 添加登录检查
+    // 修改登录检查函数
     function checkLogin() {
         const isLoggedIn = localStorage.getItem('isLoggedIn');
-        if (!isLoggedIn) {
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!isLoggedIn || !currentUser) {
             window.location.href = 'login.html';
             return false;
         }
         return true;
     }
 
+    // 在脚本开始处立即检查登录
     if (!checkLogin()) {
         throw new Error('未登录');
     }
@@ -132,18 +134,29 @@
     }
 
     function exchangeReward() {
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (!currentUser) {
-            alert('请先登录！');
+        // 再次检查登录状态
+        if (!checkLogin()) {
             return;
         }
 
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
         const users = JSON.parse(localStorage.getItem('users')) || [];
         const user = users.find(u => u.username === currentUser.username);
 
         if (!user) {
-            alert('用户信息不存在！');
+            alert('用户信息获取失败！');
+            window.location.href = 'login.html';
             return;
+        }
+
+        // 确保 potions 对象存在
+        if (!user.potions) {
+            user.potions = {
+                strength: 0,
+                speed: 0,
+                healing: 0,
+                goldenWarrior: 0
+            };
         }
 
         // 创建药水选择对话框
@@ -156,7 +169,12 @@
             "请输入数字1-4："
         );
 
-        if (!potionType || !["1", "2", "3", "4"].includes(potionType)) {
+        // 如果用户点击取消，直接返回
+        if (potionType === null) {
+            return;
+        }
+
+        if (!["1", "2", "3", "4"].includes(potionType)) {
             alert('无效的选择！');
             return;
         }

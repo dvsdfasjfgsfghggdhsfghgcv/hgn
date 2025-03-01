@@ -70,17 +70,18 @@
     <canvas id="gameCanvas"></canvas>
 
     <script>
-        // 添加在脚本最开始处
+        // 修改登录检查函数
         function checkLogin() {
             const isLoggedIn = localStorage.getItem('isLoggedIn');
-            if (!isLoggedIn) {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (!isLoggedIn || !currentUser) {
                 window.location.href = 'login.html';
                 return false;
             }
             return true;
         }
 
-        // 页面加载时检查登录状态
+        // 在脚本开始处立即检查登录
         if (!checkLogin()) {
             throw new Error('未登录');
         }
@@ -775,15 +776,39 @@
             }
         }
 
-        // 使用药水按钮事件
+        // 修改使用药水按钮事件
         document.getElementById('usePotions').addEventListener('click', function() {
+            // 再次检查登录状态
+            if (!checkLogin()) {
+                return;
+            }
+
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
             const users = JSON.parse(localStorage.getItem('users')) || [];
             const user = users.find(u => u.username === currentUser.username);
 
-            if (!currentUser || !currentUser.potions || !user) {
+            if (!user) {
                 alert('用户信息获取失败！');
+                window.location.href = 'login.html';
                 return;
+            }
+
+            // 确保 potions 对象存在
+            if (!user.potions) {
+                user.potions = {
+                    strength: 0,
+                    speed: 0,
+                    healing: 0,
+                    goldenWarrior: 0
+                };
+            }
+            if (!currentUser.potions) {
+                currentUser.potions = {
+                    strength: 0,
+                    speed: 0,
+                    healing: 0,
+                    goldenWarrior: 0
+                };
             }
 
             const choice = prompt(
@@ -794,6 +819,16 @@
                 "4. 黄金战士\n" +
                 "请输入数字1-4："
             );
+
+            // 如果用户点击取消，直接返回
+            if (choice === null) {
+                return;
+            }
+
+            if (!["1", "2", "3", "4"].includes(choice)) {
+                alert('无效的选择！');
+                return;
+            }
 
             switch (choice) {
                 case "1":
