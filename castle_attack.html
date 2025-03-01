@@ -59,6 +59,13 @@
         <button id="road1">1路</button>
         <button id="road2">2路</button>
         <button id="road3">3路</button>
+        <button id="usePotions">使用药水</button>
+        <div id="potionCounts" style="margin-top: 10px;">
+            <div>力量药水: <span id="strengthPotionCount">0</span></div>
+            <div>速度药水: <span id="speedPotionCount">0</span></div>
+            <div>治疗药水: <span id="healingPotionCount">0</span></div>
+            <div>黄金战士: <span id="goldenWarriorCount">0</span></div>
+        </div>
     </div>
     <canvas id="gameCanvas"></canvas>
 
@@ -115,6 +122,17 @@
         let archers = []; // 我方弓箭手数组
         let enemyArchers = []; // 敌方弓箭手数组
         const archerCost = 5; // 弓箭手成本
+
+        // 添加药水效果变量
+        let strengthMultiplier = 1;
+        let speedMultiplier = 1;
+        let potionEffects = {
+            strength: false,
+            speed: false
+        };
+
+        // 添加黄金战士数组
+        let goldenWarriors = [];
 
         // 绘制道路
         function drawRoad() {
@@ -175,6 +193,11 @@
             enemyArchers.forEach((archer) => {
                 ctx.fillRect(archer.x, archer.y, 20, 20);
             });
+
+            ctx.fillStyle = 'gold'; // 金色代表黄金战士
+            goldenWarriors.forEach((warrior) => {
+                ctx.fillRect(warrior.x, warrior.y, 20, 20);
+            });
         }
 
         // 更新金钱和士兵数量
@@ -183,7 +206,7 @@
             soldiers.forEach((soldier, index) => {
                 if (soldierAction === 'attack') {
                     if (soldier.x < canvas.width - 100) {
-                        soldier.x += 2; // 士兵向敌方城堡移动
+                        soldier.x += 2 * speedMultiplier; // 士兵向敌方城堡移动
                     } else {
                         // 攻击敌方城堡
                         const roadIndex = Math.floor(soldier.y / (canvas.height / 3)); // 确定士兵在哪条道路
@@ -191,7 +214,7 @@
 
                         // 检查是否可以攻击
                         if (!soldier.lastAttackTime || currentTime - soldier.lastAttackTime >= 1000) {
-                            enemyCastleHealth[roadIndex]--; // 减少对应道路的敌方城堡血量
+                            enemyCastleHealth[roadIndex] -= 1 * strengthMultiplier; // 减少对应道路的敌方城堡血量
                             soldier.lastAttackTime = currentTime; // 更新最后攻击时间
                         }
                     }
@@ -210,12 +233,12 @@
             warriors.forEach((warrior, index) => {
                 if (soldierAction === 'attack') {
                     if (warrior.x < canvas.width - 100) {
-                        warrior.x += 2; // 战士向敌方城堡移动
+                        warrior.x += 2 * speedMultiplier; // 战士向敌方城堡移动
                     } else {
                         const roadIndex = Math.floor(warrior.y / (canvas.height / 3));
                         const currentTime = Date.now();
                         if (!warrior.lastAttackTime || currentTime - warrior.lastAttackTime >= 1000) {
-                            enemyCastleHealth[roadIndex] -= 2; // 战士造成双倍伤害
+                            enemyCastleHealth[roadIndex] -= 2 * strengthMultiplier; // 战士造成双倍伤害
                             warrior.lastAttackTime = currentTime;
                         }
                     }
@@ -331,7 +354,7 @@
                     const roadIndex = Math.floor(warrior.y / (canvas.height / 3));
                     const currentTime = Date.now();
                     if (!warrior.lastAttackTime || currentTime - warrior.lastAttackTime >= 1000) {
-                        myCastleHealth[roadIndex] -= 2; // 敌方战士也造成双倍伤害
+                        myCastleHealth[roadIndex] -= 2 * strengthMultiplier; // 敌方战士也造成双倍伤害
                         warrior.lastAttackTime = currentTime;
                         document.getElementById(`myCastleHealth${roadIndex + 1}`).innerText = myCastleHealth[roadIndex];
                     }
@@ -483,6 +506,89 @@
 
                 // ... existing enemy archer attack code ...
             });
+
+            // 更新黄金战士
+            goldenWarriors.forEach((warrior, index) => {
+                if (soldierAction === 'attack') {
+                    if (warrior.x < canvas.width - 100) {
+                        warrior.x += 2 * speedMultiplier;
+                    } else {
+                        const roadIndex = Math.floor(warrior.y / (canvas.height / 3));
+                        const currentTime = Date.now();
+                        if (!warrior.lastAttackTime || currentTime - warrior.lastAttackTime >= 1000) {
+                            enemyCastleHealth[roadIndex] -= 3 * strengthMultiplier; // 黄金战士造成3倍伤害
+                            warrior.lastAttackTime = currentTime;
+                        }
+                    }
+                } else if (soldierAction === 'defend') {
+                    // 战士待在原地
+                } else if (soldierAction === 'retreat') {
+                    warrior.x -= 2;
+                    if (warrior.x < 50) {
+                        warrior.x = 50;
+                        goldenWarriors.splice(index, 1);
+                    }
+                }
+            });
+
+            // 黄金战士与敌方单位的碰撞检测
+            goldenWarriors.forEach((warrior, warriorIndex) => {
+                // 与普通士兵的碰撞
+                enemySoldiers.forEach((enemySoldier, enemyIndex) => {
+                    if (warrior.x < enemySoldier.x + 20 && warrior.x + 20 > enemySoldier.x &&
+                        warrior.y < enemySoldier.y + 20 && warrior.y + 20 > enemySoldier.y) {
+                        enemySoldiers.splice(enemyIndex, 1); // 一击必杀
+                    }
+                });
+
+                // 与敌方战士的碰撞
+                enemyWarriors.forEach((enemyWarrior, enemyIndex) => {
+                    if (warrior.x < enemyWarrior.x + 20 && warrior.x + 20 > enemyWarrior.x &&
+                        warrior.y < enemyWarrior.y + 20 && warrior.y + 20 > enemyWarrior.y) {
+                        enemyWarrior.goldenHits = (enemyWarrior.goldenHits || 0) + 1;
+                        if (enemyWarrior.goldenHits >= 2) { // 两击击杀战士
+                            enemyWarriors.splice(enemyIndex, 1);
+                        }
+                        warrior.hits = (warrior.hits || 0) + 1;
+                        if (warrior.hits >= 8) { // 需要8次攻击才能击杀黄金战士
+                            goldenWarriors.splice(warriorIndex, 1);
+                        }
+                    }
+                });
+
+                // 与敌方弓箭手的碰撞
+                enemyArchers.forEach((archer, archerIndex) => {
+                    if (warrior.x < archer.x + 20 && warrior.x + 20 > archer.x &&
+                        warrior.y < archer.y + 20 && warrior.y + 20 > archer.y) {
+                        enemyArchers.splice(archerIndex, 1); // 一击必杀弓箭手
+                    }
+                });
+            });
+
+            // 敌方单位攻击黄金战士
+            goldenWarriors.forEach((warrior, warriorIndex) => {
+                // 敌方战士的攻击
+                enemyWarriors.forEach(enemyWarrior => {
+                    if (Math.abs(warrior.x - enemyWarrior.x) < 20 &&
+                        Math.abs(warrior.y - enemyWarrior.y) < 20) {
+                        warrior.warriorHits = (warrior.warriorHits || 0) + 1;
+                        if (warrior.warriorHits >= 5) { // 敌方战士需要5击才能击杀黄金战士
+                            goldenWarriors.splice(warriorIndex, 1);
+                        }
+                    }
+                });
+
+                // 敌方弓箭手的攻击
+                enemyArchers.forEach(archer => {
+                    if (Math.abs(warrior.x - archer.x) < 100 &&
+                        Math.abs(warrior.y - archer.y) < 20) {
+                        warrior.archerHits = (warrior.archerHits || 0) + 1;
+                        if (warrior.archerHits >= 6) { // 敌方弓箭手需要6击才能击杀黄金战士
+                            goldenWarriors.splice(warriorIndex, 1);
+                        }
+                    }
+                });
+            });
         }
 
         // 重置游戏
@@ -496,6 +602,7 @@
             enemyWarriors = []; // 重置敌方战士
             archers = [];
             enemyArchers = [];
+            goldenWarriors = [];
             document.getElementById('money').innerText = money;
             document.getElementById('soldierCount').innerText = soldiers.length;
             document.getElementById('warriorCount').innerText = warriors.length;
@@ -657,6 +764,125 @@
             }
         }, 60000); // 每分钟检查一次
 
+        // 更新药水显示
+        function updatePotionDisplay() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser && currentUser.potions) {
+                document.getElementById('strengthPotionCount').textContent = currentUser.potions.strength || 0;
+                document.getElementById('speedPotionCount').textContent = currentUser.potions.speed || 0;
+                document.getElementById('healingPotionCount').textContent = currentUser.potions.healing || 0;
+                document.getElementById('goldenWarriorCount').textContent = currentUser.potions.goldenWarrior || 0;
+            }
+        }
+
+        // 使用药水按钮事件
+        document.getElementById('usePotions').addEventListener('click', function() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const user = users.find(u => u.username === currentUser.username);
+
+            if (!currentUser || !currentUser.potions || !user) {
+                alert('用户信息获取失败！');
+                return;
+            }
+
+            const choice = prompt(
+                "选择要使用的药水：\n" +
+                "1. 力量药水\n" +
+                "2. 速度药水\n" +
+                "3. 治疗药水\n" +
+                "4. 黄金战士\n" +
+                "请输入数字1-4："
+            );
+
+            switch (choice) {
+                case "1":
+                    if (currentUser.potions.strength > 0) {
+                        // 更新两处的药水数量
+                        currentUser.potions.strength--;
+                        user.potions.strength = currentUser.potions.strength;
+
+                        potionEffects.strength = true;
+                        strengthMultiplier = 2;
+                        setTimeout(() => {
+                            potionEffects.strength = false;
+                            strengthMultiplier = 1;
+                            alert('力量药水效果已结束！');
+                        }, 30000);
+                        alert('力量药水生效中！攻击力翻倍！');
+                    } else {
+                        alert('没有力量药水了！');
+                        return;
+                    }
+                    break;
+                case "2":
+                    if (currentUser.potions.speed > 0) {
+                        // 更新两处的药水数量
+                        currentUser.potions.speed--;
+                        user.potions.speed = currentUser.potions.speed;
+
+                        potionEffects.speed = true;
+                        speedMultiplier = 1.5;
+                        setTimeout(() => {
+                            potionEffects.speed = false;
+                            speedMultiplier = 1;
+                            alert('速度药水效果已结束！');
+                        }, 30000);
+                        alert('速度药水生效中！移动速度提升50%！');
+                    } else {
+                        alert('没有速度药水了！');
+                        return;
+                    }
+                    break;
+                case "3":
+                    if (currentUser.potions.healing > 0) {
+                        // 更新两处的药水数量
+                        currentUser.potions.healing--;
+                        user.potions.healing = currentUser.potions.healing;
+
+                        myCastleHealth = myCastleHealth.map(health => Math.min(100, health + 50));
+                        document.getElementById('myCastleHealth1').innerText = myCastleHealth[0];
+                        document.getElementById('myCastleHealth2').innerText = myCastleHealth[1];
+                        document.getElementById('myCastleHealth3').innerText = myCastleHealth[2];
+                        alert('治疗药水生效！城堡恢复50点生命值！');
+                    } else {
+                        alert('没有治疗药水了！');
+                        return;
+                    }
+                    break;
+                case "4":
+                    if (currentUser.potions.goldenWarrior > 0) {
+                        // 更新两处的药水数量
+                        currentUser.potions.goldenWarrior--;
+                        user.potions.goldenWarrior = currentUser.potions.goldenWarrior;
+
+                        goldenWarriors.push({
+                            x: 50,
+                            y: (canvas.height / 3) * (selectedRoad + 1) - 20,
+                            lastAttackTime: null,
+                            hits: 0,
+                            warriorHits: 0,
+                            archerHits: 0
+                        });
+                        alert('成功召唤黄金战士！');
+                    } else {
+                        alert('没有黄金战士了！');
+                        return;
+                    }
+                    break;
+                default:
+                    alert('无效的选择！');
+                    return;
+            }
+
+            // 保存更新后的数据
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            localStorage.setItem('users', JSON.stringify(users));
+
+            // 更新显示
+            updatePotionDisplay();
+        });
+
         // 启动游戏
         gameLoop();
 
@@ -665,6 +891,9 @@
 
         // 初始化画布大小
         resizeCanvas();
+
+        // 页面加载时更新药水显示
+        updatePotionDisplay();
     </script>
 </body>
 
