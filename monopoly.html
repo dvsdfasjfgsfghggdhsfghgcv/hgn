@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大富翁游戏</title>
+    <link rel="stylesheet" href="login.css">
+    <style>
+        /* 游戏棋盘样式 */
+        
+        .board {
+            display: grid;
+            grid-template-columns: repeat(7, 100px);
+            grid-template-rows: repeat(7, 100px);
+            gap: 2px;
+            margin: 20px auto;
+            width: 710px;
+            height: 710px;
+        }
+        
+        .cell {
+            border: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background-color: #f5f5f5;
+            position: relative;
+            padding: 5px;
+            font-size: 12px;
+        }
+        
+        .cell-center {
+            grid-column: 2 / 7;
+            grid-row: 2 / 7;
+            background-color: #e9f7ef;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .player {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            position: absolute;
+        }
+        
+        .player1 {
+            background-color: red;
+            top: 5px;
+            left: 5px;
+        }
+        
+        .player2 {
+            background-color: blue;
+            top: 5px;
+            right: 5px;
+        }
+        
+        .property-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .property-price {
+            color: #2e7d32;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .player-info {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        
+        .player-card {
+            width: 200px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>大富翁游戏</h1>
+
+    <div class="player-info">
+        <div class="player-card" id="player1Info">
+            <h3>玩家 1</h3>
+            <p>金钱: <span id="player1Money">1500</span></p>
+            <p>位置: <span id="player1Position">起点</span></p>
+            <p>拥有的地产: <span id="player1Properties">无</span></p>
+        </div>
+        <div class="player-card" id="player2Info">
+            <h3>电脑</h3>
+            <p>金钱: <span id="player2Money">1500</span></p>
+            <p>位置: <span id="player2Position">起点</span></p>
+            <p>拥有的地产: <span id="player2Properties">无</span></p>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="rollDice" class="button">掷骰子</button>
+        <button id="endTurn" class="button" disabled>结束回合</button>
+        <button id="buyProperty" class="button" disabled>购买地产</button>
+    </div>
+
+    <div class="board" id="gameBoard">
+        <!-- 游戏棋盘会通过JavaScript动态生成 -->
+        <div class="cell-center">
+            <h2>大富翁</h2>
+            <div id="gameMessage">点击掷骰子开始游戏</div>
+            <div id="diceResult" style="font-size: 24px; margin: 20px 0;"></div>
+        </div>
+    </div>
+
+    <a class="button" href="game.html" style="display: block; text-align: center; margin: 20px;">返回游戏选择</a>
+
+    <script>
+        // 在脚本开始处立即检查登录
+        function checkLogin() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (!isLoggedIn || !currentUser) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            return true;
+        }
+
+        if (!checkLogin()) {
+            throw new Error('未登录');
+        }
+
+        // 游戏数据
+        const gameData = {
+            currentPlayer: 1,
+            players: {
+                1: {
+                    position: 0,
+                    money: 1500,
+                    properties: [],
+                    inJail: false,
+                    jailTurns: 0,
+                    resting: false
+                },
+                2: {
+                    position: 0,
+                    money: 1500,
+                    properties: [],
+                    inJail: false,
+                    jailTurns: 0,
+                    resting: false
+                }
+            },
+            properties: [{
+                name: "起点",
+                type: "start",
+                action: "collect",
+                value: 200
+            }, {
+                name: "北京路",
+                type: "property",
+                price: 100,
+                rent: 400,
+                owner: null
+            }, {
+                name: "机会",
+                type: "chance"
+            }, {
+                name: "上海路",
+                type: "property",
+                price: 120,
+                rent: 400,
+                owner: null
+            }, {
+                name: "所得税",
+                type: "tax",
+                value: 100
+            }, {
+                name: "杭州南站",
+                type: "station",
+                price: 200,
+                rent: 400,
+                owner: null
+            }, {
+                name: "广州路",
+                type: "property",
+                price: 140,
+                rent: 400,
+                owner: null
+            }, {
+                name: "命运",
+                type: "chance"
+            }, {
+                name: "深圳湾",
+                type: "property",
+                price: 160,
+                rent: 400,
+                owner: null
+            }, {
+                name: "监狱",
+                type: "jail",
+                action: "visit"
+            }, {
+                name: "南京路",
+                type: "property",
+                price: 180,
+                rent: 400,
+                owner: null
+            }, {
+                name: "电力公司",
+                type: "utility",
+                price: 150,
+                rent: 400,
+                owner: null
+            }, {
+                name: "成都路",
+                type: "property",
+                price: 200,
+                rent: 400,
+                owner: null
+            }, {
+                name: "重庆路",
+                type: "property",
+                price: 200,
+                rent: 400,
+                owner: null
+            }, {
+                name: "西安北站",
+                type: "station",
+                price: 200,
+                rent: 400,
+                owner: null
+            }, {
+                name: "天津路",
+                type: "property",
+                price: 220,
+                rent: 400,
+                owner: null
+            }, {
+                name: "机会",
+                type: "chance"
+            }, {
+                name: "武汉路",
+                type: "property",
+                price: 240,
+                rent: 400,
+                owner: null
+            }, {
+                name: "免费停车",
+                type: "parking"
+            }, {
+                name: "长沙路",
+                type: "property",
+                price: 260,
+                rent: 400,
+                owner: null
+            }, {
+                name: "命运",
+                type: "chance"
+            }, {
+                name: "郑州路",
+                type: "property",
+                price: 280,
+                rent: 400,
+                owner: null
+            }, {
+                name: "苏州路",
+                type: "property",
+                price: 300,
+                rent: 400,
+                owner: null
+            }, {
+                name: "厦门北站",
+                type: "station",
+                price: 200,
+                rent: 400,
+                owner: null
+            }, {
+                name: "青岛路",
+                type: "property",
+                price: 320,
+                rent: 400,
+                owner: null
+            }, {
+                name: "水务公司",
+                type: "utility",
+                price: 150,
+                rent: 400,
+                owner: null
+            }, {
+                name: "大连路",
+                type: "property",
+                price: 350,
+                rent: 400,
+                owner: null
+            }, {
+                name: "进入监狱",
+                type: "goto-jail"
+            }],
+            chanceCards: [{
+                text: "向银行缴纳学费，支付150元",
+                action: "pay",
+                value: 150
+            }, {
+                text: "银行付给你股息，收入50元",
+                action: "receive",
+                value: 50
+            }, {
+                text: "你的房屋和酒店需要维修，每套房子25元",
+                action: "repair",
+                houseValue: 25,
+                hotelValue: 100
+            }, {
+                text: "生日快乐！每位玩家送你10元",
+                action: "birthday",
+                value: 10
+            }, {
+                text: "前进到起点",
+                action: "goto",
+                destination: 0
+            }, {
+                text: "前进3格",
+                action: "move",
+                steps: 3
+            }, {
+                text: "后退2格",
+                action: "move",
+                steps: -2
+            }, {
+                text: "获得免费出狱卡",
+                action: "getOutOfJail"
+            }],
+            diceResult: 0,
+            gameState: "waiting", // waiting, rolled, buying, ended
+        };
+
+        // 初始化游戏棋盘
+        function initializeBoard() {
+            const board = document.getElementById('gameBoard');
+            const cells = [];
+
+            // 创建棋盘单元格
+            for (let i = 0; i < 28; i++) {
+                const property = gameData.properties[i];
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.id = `cell-${i}`;
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'property-name';
+                nameDiv.textContent = property.name;
+                cell.appendChild(nameDiv);
+
+                if (property.type === 'property' || property.type === 'station' || property.type === 'utility') {
+                    const priceDiv = document.createElement('div');
+                    priceDiv.className = 'property-price';
+                    priceDiv.textContent = `￥${property.price}`;
+                    cell.appendChild(priceDiv);
+                }
+
+                cells.push(cell);
+            }
+
+            // 定位棋盘单元格
+            // 底部行
+            for (let i = 0; i < 7; i++) {
+                cells[i].style.gridColumn = 7 - i;
+                cells[i].style.gridRow = 7;
+            }
+
+            // 左侧列
+            for (let i = 7; i < 14; i++) {
+                cells[i].style.gridColumn = 1;
+                cells[i].style.gridRow = 7 - (i - 7);
+            }
+
+            // 顶部行
+            for (let i = 14; i < 21; i++) {
+                cells[i].style.gridColumn = i - 13;
+                cells[i].style.gridRow = 1;
+            }
+
+            // 右侧列
+            for (let i = 21; i < 28; i++) {
+                cells[i].style.gridColumn = 7;
+                cells[i].style.gridRow = i - 20;
+            }
+
+            // 添加单元格到棋盘
+            cells.forEach(cell => board.appendChild(cell));
+
+            // 创建玩家标记
+            createPlayerMarker(1, 0);
+            createPlayerMarker(2, 0);
+        }
+
+        // 创建玩家标记
+        function createPlayerMarker(playerNum, position) {
+            const playerMarker = document.createElement('div');
+            playerMarker.className = `player player${playerNum}`;
+            playerMarker.id = `player${playerNum}-marker`;
+            document.getElementById(`cell-${position}`).appendChild(playerMarker);
+        }
+
+        // 更新玩家位置
+        function updatePlayerPosition(playerNum, newPosition) {
+            const playerMarker = document.getElementById(`player${playerNum}-marker`);
+            const oldCell = playerMarker.parentNode;
+            oldCell.removeChild(playerMarker);
+            document.getElementById(`cell-${newPosition}`).appendChild(playerMarker);
+        }
+
+        // 更新玩家信息显示
+        function updatePlayerInfo() {
+            const p1 = gameData.players[1];
+            const p2 = gameData.players[2];
+
+            document.getElementById('player1Money').textContent = p1.money;
+            document.getElementById('player1Position').textContent =
+                p1.inJail ? `监狱(还剩${p1.jailTurns}回合)` :
+                p1.resting ? `${gameData.properties[p1.position].name}(休息中)` :
+                gameData.properties[p1.position].name;
+            document.getElementById('player1Properties').textContent = p1.properties.length > 0 ?
+                p1.properties.map(id => gameData.properties[id].name).join(', ') : '无';
+
+            document.getElementById('player2Money').textContent = p2.money;
+            document.getElementById('player2Position').textContent =
+                p2.inJail ? `监狱(还剩${p2.jailTurns}回合)` :
+                p2.resting ? `${gameData.properties[p2.position].name}(休息中)` :
+                gameData.properties[p2.position].name;
+            document.getElementById('player2Properties').textContent = p2.properties.length > 0 ?
+                p2.properties.map(id => gameData.properties[id].name).join(', ') : '无';
+        }
+
+        // 掷骰子
+        function rollDice() {
+            if (gameData.gameState !== 'waiting') return;
+
+            const currentPlayer = gameData.currentPlayer;
+            const player = gameData.players[currentPlayer];
+
+            // 检查是否在休息
+            if (player.resting) {
+                player.resting = false;
+                document.getElementById('gameMessage').textContent = '你本回合需要休息，跳过行动';
+                gameData.gameState = 'rolled';
+                document.getElementById('rollDice').disabled = true;
+                document.getElementById('endTurn').disabled = false;
+                return;
+            }
+
+            // 检查是否在监狱中
+            if (player.inJail) {
+                const dice = Math.floor(Math.random() * 6) + 1;
+                const dice2 = Math.floor(Math.random() * 6) + 1;
+                gameData.diceResult = dice + dice2;
+                document.getElementById('diceResult').textContent = `骰子点数: ${dice}, ${dice2}`;
+
+                if (dice === dice2) { // 掷出双数
+                    player.inJail = false;
+                    player.jailTurns = 0;
+                    document.getElementById('gameMessage').textContent = '恭喜！掷出双数，你从监狱中释放了';
+                } else {
+                    player.jailTurns--;
+                    if (player.jailTurns <= 0) {
+                        player.inJail = false;
+                        document.getElementById('gameMessage').textContent = '你已服完监狱时间，获得自由！';
+                    } else {
+                        document.getElementById('gameMessage').textContent = `还需要在监狱中停留${player.jailTurns}回合`;
+                        gameData.gameState = 'rolled';
+                        document.getElementById('rollDice').disabled = true;
+                        document.getElementById('endTurn').disabled = false;
+                        return;
+                    }
+                }
+            }
+
+            const dice = Math.floor(Math.random() * 6) + 1;
+            gameData.diceResult = dice;
+            document.getElementById('diceResult').textContent = `骰子点数: ${dice}`;
+
+            let newPosition = (player.position + dice) % gameData.properties.length;
+
+            // 如果经过起点，获得200元
+            if (newPosition < player.position) {
+                player.money += 200;
+                document.getElementById('gameMessage').textContent = '经过起点，获得200元';
+            }
+
+            player.position = newPosition;
+            updatePlayerPosition(currentPlayer, newPosition);
+
+            // 处理玩家落地效果
+            handleLanding(currentPlayer, newPosition);
+
+            // 更新游戏状态
+            gameData.gameState = 'rolled';
+            document.getElementById('rollDice').disabled = true;
+            document.getElementById('endTurn').disabled = false;
+
+            updatePlayerInfo();
+        }
+
+        // 处理玩家落地效果
+        function handleLanding(playerNum, position) {
+            const player = gameData.players[playerNum];
+            const property = gameData.properties[position];
+            const messageDiv = document.getElementById('gameMessage');
+
+            switch (property.type) {
+                case 'start':
+                    messageDiv.textContent = '落在起点，获得200元';
+                    player.money += 200;
+                    break;
+                case 'property':
+                case 'station':
+                case 'utility':
+                    if (property.owner === null) {
+                        messageDiv.textContent = `${property.name}无人拥有，你可以购买`;
+                        document.getElementById('buyProperty').disabled = false;
+                    } else if (property.owner !== playerNum) {
+                        const rent = property.rent;
+                        messageDiv.textContent = `支付${rent}元租金给玩家${property.owner}`;
+                        player.money -= rent;
+                        gameData.players[property.owner].money += rent;
+                    } else {
+                        messageDiv.textContent = '你拥有这块地产';
+                    }
+                    break;
+                case 'tax':
+                    messageDiv.textContent = `支付${property.value}元税款`;
+                    player.money -= property.value;
+                    break;
+                case 'chance':
+                    drawChanceCard(playerNum);
+                    break;
+                case 'jail':
+                    messageDiv.textContent = '只是路过监狱';
+                    break;
+                case 'parking':
+                    messageDiv.textContent = '免费停车，休息一回合';
+                    player.resting = true;
+                    break;
+                case 'goto-jail':
+                    messageDiv.textContent = '进入监狱！你需要停留3回合或掷出双数才能出狱';
+                    player.position = 9; // 监狱的位置
+                    player.inJail = true;
+                    player.jailTurns = 3; // 设置在监狱中的回合数
+                    updatePlayerPosition(playerNum, 9);
+                    break;
+            }
+        }
+
+        // 抽取机会卡
+        function drawChanceCard(playerNum) {
+            const player = gameData.players[playerNum];
+            const cardIndex = Math.floor(Math.random() * gameData.chanceCards.length);
+            const card = gameData.chanceCards[cardIndex];
+            const messageDiv = document.getElementById('gameMessage');
+
+            messageDiv.textContent = `机会卡: ${card.text}`;
+
+            switch (card.action) {
+                case 'pay':
+                    player.money -= card.value;
+                    break;
+                case 'receive':
+                    player.money += card.value;
+                    break;
+                case 'goto':
+                    player.position = card.destination;
+                    updatePlayerPosition(playerNum, card.destination);
+                    break;
+                case 'move':
+                    let newPosition = player.position + card.steps;
+                    if (newPosition < 0) newPosition += gameData.properties.length;
+                    if (newPosition >= gameData.properties.length) newPosition -= gameData.properties.length;
+                    player.position = newPosition;
+                    updatePlayerPosition(playerNum, newPosition);
+                    break;
+                    // 其他卡片效果...
+            }
+        }
+
+        // 购买地产
+        function buyProperty() {
+            const playerNum = gameData.currentPlayer;
+            const player = gameData.players[playerNum];
+            const property = gameData.properties[player.position];
+            const messageDiv = document.getElementById('gameMessage');
+
+            if (property.owner !== null ||
+                (property.type !== 'property' && property.type !== 'station' && property.type !== 'utility')) {
+                messageDiv.textContent = '无法购买该地产';
+                return;
+            }
+
+            if (player.money < property.price) {
+                messageDiv.textContent = '资金不足，无法购买';
+                return;
+            }
+
+            player.money -= property.price;
+            property.owner = playerNum;
+            player.properties.push(player.position);
+
+            messageDiv.textContent = `成功购买${property.name}`;
+            document.getElementById('buyProperty').disabled = true;
+
+            updatePlayerInfo();
+        }
+
+        // 结束回合
+        function endTurn() {
+            if (gameData.gameState !== 'rolled') return;
+
+            document.getElementById('buyProperty').disabled = true;
+            document.getElementById('endTurn').disabled = true;
+            document.getElementById('diceResult').textContent = '';
+
+            // 切换到下一个玩家
+            gameData.currentPlayer = gameData.currentPlayer === 1 ? 2 : 1;
+            document.getElementById('gameMessage').textContent = `轮到玩家${gameData.currentPlayer}`;
+
+            gameData.gameState = 'waiting';
+
+            // 如果是电脑玩家，自动行动
+            if (gameData.currentPlayer === 2) {
+                setTimeout(computerPlay, 1000);
+            } else {
+                document.getElementById('rollDice').disabled = false;
+            }
+
+            // 检查游戏结束条件
+            checkGameEnd();
+        }
+
+        // 电脑玩家行动
+        function computerPlay() {
+            // 掷骰子
+            rollDice();
+
+            // 如果电脑在休息，直接结束回合
+            if (gameData.players[2].resting) {
+                setTimeout(endTurn, 1000);
+                return;
+            }
+
+            setTimeout(() => {
+                // 如果不在监狱且可以购买地产，有70%几率购买
+                if (!gameData.players[2].inJail && document.getElementById('buyProperty').disabled === false && Math.random() < 0.7) {
+                    buyProperty();
+                }
+
+                // 结束回合
+                setTimeout(endTurn, 1000);
+            }, 1000);
+        }
+
+        // 检查游戏结束
+        function checkGameEnd() {
+            const p1 = gameData.players[1];
+            const p2 = gameData.players[2];
+
+            if (p1.money <= 0) {
+                endGame("电脑赢了！玩家破产了。");
+                return true;
+            }
+
+            if (p2.money <= 0) {
+                endGame("恭喜你赢了！电脑破产了。");
+                return true;
+            }
+
+            // 如果玩家拥有超过一半的地产，也算赢
+            const totalProperties = gameData.properties.filter(p =>
+                p.type === 'property' || p.type === 'station' || p.type === 'utility').length;
+
+            if (p1.properties.length > totalProperties / 2) {
+                endGame("恭喜你赢了！你拥有了大部分地产。");
+                return true;
+            }
+
+            if (p2.properties.length > totalProperties / 2) {
+                endGame("电脑赢了！电脑拥有了大部分地产。");
+                return true;
+            }
+
+            return false;
+        }
+
+        // 结束游戏
+        function endGame(message) {
+            document.getElementById('gameMessage').textContent = message;
+            document.getElementById('rollDice').disabled = true;
+            document.getElementById('endTurn').disabled = true;
+            document.getElementById('buyProperty').disabled = true;
+
+            // 添加游戏结束分数到用户记录
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser) {
+                const gameScore = gameData.players[1].money + gameData.players[1].properties.length * 50;
+                const users = JSON.parse(localStorage.getItem('users')) || [];
+                const userIndex = users.findIndex(u => u.username === currentUser.username);
+
+                if (userIndex !== -1) {
+                    users[userIndex].score = (users[userIndex].score || 0) + gameScore;
+                    localStorage.setItem('users', JSON.stringify(users));
+                    localStorage.setItem('currentUser', JSON.stringify(users[userIndex]));
+
+                    // 显示获得的积分
+                    setTimeout(() => {
+                        alert(`游戏结束！你获得了${gameScore}积分！`);
+                    }, 1000);
+                }
+            }
+        }
+
+        // 初始化游戏
+        function initGame() {
+            initializeBoard();
+            updatePlayerInfo();
+
+            // 绑定按钮事件
+            document.getElementById('rollDice').addEventListener('click', rollDice);
+            document.getElementById('endTurn').addEventListener('click', endTurn);
+            document.getElementById('buyProperty').addEventListener('click', buyProperty);
+        }
+
+        // 当页面加载完成时初始化游戏
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+
+</html>
