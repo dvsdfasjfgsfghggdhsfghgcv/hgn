@@ -483,38 +483,35 @@
                     player.inJail = false;
                     player.jailTurns = 0;
                     document.getElementById('gameMessage').textContent = '恭喜！掷出双数，你从监狱中释放了';
+
+                    // 出狱后可以移动
+                    const moveSteps = dice + dice2;
+                    movePlayer(currentPlayer, moveSteps);
                 } else {
                     player.jailTurns--;
                     if (player.jailTurns <= 0) {
                         player.inJail = false;
                         document.getElementById('gameMessage').textContent = '你已服完监狱时间，获得自由！';
+
+                        // 服完刑期后可以移动
+                        movePlayer(currentPlayer, dice + dice2);
                     } else {
                         document.getElementById('gameMessage').textContent = `还需要在监狱中停留${player.jailTurns}回合`;
                         gameData.gameState = 'rolled';
                         document.getElementById('rollDice').disabled = true;
                         document.getElementById('endTurn').disabled = false;
+                        updatePlayerInfo();
                         return;
                     }
                 }
+            } else {
+                // 正常掷骰子移动
+                const dice = Math.floor(Math.random() * 6) + 1;
+                gameData.diceResult = dice;
+                document.getElementById('diceResult').textContent = `骰子点数: ${dice}`;
+
+                movePlayer(currentPlayer, dice);
             }
-
-            const dice = Math.floor(Math.random() * 6) + 1;
-            gameData.diceResult = dice;
-            document.getElementById('diceResult').textContent = `骰子点数: ${dice}`;
-
-            let newPosition = (player.position + dice) % gameData.properties.length;
-
-            // 如果经过起点，获得200元
-            if (newPosition < player.position) {
-                player.money += 200;
-                document.getElementById('gameMessage').textContent = '经过起点，获得200元';
-            }
-
-            player.position = newPosition;
-            updatePlayerPosition(currentPlayer, newPosition);
-
-            // 处理玩家落地效果
-            handleLanding(currentPlayer, newPosition);
 
             // 更新游戏状态
             gameData.gameState = 'rolled';
@@ -522,6 +519,24 @@
             document.getElementById('endTurn').disabled = false;
 
             updatePlayerInfo();
+        }
+
+        // 新增函数: 移动玩家
+        function movePlayer(playerNum, steps) {
+            const player = gameData.players[playerNum];
+            let newPosition = (player.position + steps) % gameData.properties.length;
+
+            // 如果经过起点，获得200元
+            if (newPosition < player.position && steps > 0) {
+                player.money += 200;
+                document.getElementById('gameMessage').textContent = '经过起点，获得200元';
+            }
+
+            player.position = newPosition;
+            updatePlayerPosition(playerNum, newPosition);
+
+            // 处理玩家落地效果
+            handleLanding(playerNum, newPosition);
         }
 
         // 处理玩家落地效果
