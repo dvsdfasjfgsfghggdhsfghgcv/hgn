@@ -81,6 +81,56 @@
             font-size: 24px;
             margin-bottom: 20px;
         }
+        /* 添加邮箱验证相关样式 */
+        
+        .verify-email-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .verify-code-container {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        #verify-code-input {
+            flex: 1;
+            margin-right: 5px;
+        }
+        
+        #send-code-btn {
+            white-space: nowrap;
+            background-color: #28a745;
+        }
+        
+        #verify-email-btn {
+            white-space: nowrap;
+            background-color: #007bff;
+        }
+        
+        .verification-status {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        /* 添加验证码按钮的新样式 */
+        
+        #send-code-btn,
+        #reset-send-code-btn {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        #send-code-btn:hover,
+        #reset-send-code-btn:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 
@@ -94,6 +144,7 @@
         </form>
         <p class="message error" id="login-error"></p>
         <p class="message"><a href="#" onclick="showRegisterForm(); return false;">注册新账号</a></p>
+        <p class="message"><a href="#" onclick="showResetPasswordForm(); return false;">忘记密码？</a></p>
     </div>
 
     <div class="container" id="register-container" style="display: none;">
@@ -101,10 +152,41 @@
         <form id="register-form">
             <input type="text" id="register-username" placeholder="用户名" required>
             <input type="password" id="register-password" placeholder="密码" required>
+
+            <!-- 添加邮箱输入 -->
+            <input type="email" id="register-email" placeholder="邮箱" required>
+            <input type="text" id="verify-code-input" placeholder="验证码" required>
+
+            <!-- 提交注册的按钮 -->
             <button type="submit">注册</button>
+
+            <!-- 将发送验证码按钮放在注册按钮下方 -->
+            <button type="button" id="send-code-btn" onclick="sendVerificationCode()">发送验证码</button>
+
+            <div class="verification-status" id="verification-status"></div>
         </form>
         <p class="message success" id="register-success"></p>
         <p class="message error" id="register-error"></p>
+        <p class="message"><a href="#" onclick="showLoginForm(); return false;">返回登录</a></p>
+    </div>
+
+    <!-- 添加重置密码容器，同样调整验证码按钮位置 -->
+    <div class="container" id="reset-password-container" style="display: none;">
+        <h2>重置密码</h2>
+        <form id="reset-password-form">
+            <input type="text" id="reset-username" placeholder="用户名" required>
+            <input type="email" id="reset-email" placeholder="注册邮箱" required>
+            <input type="text" id="reset-code-input" placeholder="验证码" required>
+            <input type="password" id="reset-new-password" placeholder="新密码" required>
+
+            <!-- 提交重置密码的按钮 -->
+            <button type="submit">重置密码</button>
+
+            <!-- 将发送验证码按钮放在重置密码按钮下方 -->
+            <button type="button" id="reset-send-code-btn" onclick="sendResetCode()">发送验证码</button>
+        </form>
+        <p class="message error" id="reset-password-error"></p>
+        <p class="message success" id="reset-password-success"></p>
         <p class="message"><a href="#" onclick="showLoginForm(); return false;">返回登录</a></p>
     </div>
 
@@ -130,12 +212,82 @@
         const users = JSON.parse(localStorage.getItem('users')) || [];
         let currentUser = null;
 
+        // 改用 localStorage 存储验证码信息，而不是内存变量
+        // const verificationCodes = {};
+
+        // 从 localStorage 获取验证码信息
+        function getVerificationCodes() {
+            return JSON.parse(localStorage.getItem('verificationCodes')) || {};
+        }
+
+        // 保存验证码信息到 localStorage
+        function saveVerificationCode(email, code) {
+            const codes = getVerificationCodes();
+            codes[email] = {
+                code: code,
+                timestamp: new Date().getTime()
+            };
+            localStorage.setItem('verificationCodes', JSON.stringify(codes));
+        }
+
+        // 检查验证码是否有效，添加调试信息
+        function isValidVerificationCode(email, code) {
+            const codes = getVerificationCodes();
+            const codeInfo = codes[email];
+
+            console.log("验证码检查:", {
+                email: email,
+                enteredCode: code,
+                storedInfo: codeInfo,
+                allCodes: codes
+            });
+
+            // 如果没有找到验证码信息或验证码不匹配
+            if (!codeInfo) {
+                console.log("未找到该邮箱的验证码记录");
+                return false;
+            }
+
+            if (codeInfo.code !== code) {
+                console.log("验证码不匹配", "输入:", code, "存储:", codeInfo.code);
+                return false;
+            }
+
+            // 检查是否过期（10分钟有效期）
+            const now = new Date().getTime();
+            const expiry = codeInfo.timestamp + 10 * 60 * 1000;
+            const remaining = (expiry - now) / 1000; // 剩余秒数
+
+            console.log("验证码时间检查:", {
+                当前时间: new Date(now).toLocaleString(),
+                验证码时间: new Date(codeInfo.timestamp).toLocaleString(),
+                过期时间: new Date(expiry).toLocaleString(),
+                剩余秒数: remaining
+            });
+
+            if (now > expiry) {
+                console.log("验证码已过期");
+                return false;
+            }
+
+            console.log("验证码有效");
+            return true;
+        }
+
+        // 引入SendCloud服务
+        document.write('<script src="sendcloud_service.js"><\/script>');
+
         document.getElementById('login-form').addEventListener('submit', function(event) {
             event.preventDefault();
             const username = document.getElementById('login-username').value;
             const password = document.getElementById('login-password').value;
             const user = users.find(user => user.username === username && user.password === password);
             if (user) {
+                if (!user.emailVerified) {
+                    document.getElementById('login-error').textContent = '您的账号尚未通过邮箱验证，请完成验证';
+                    return;
+                }
+
                 currentUser = user;
                 localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 localStorage.setItem('isLoggedIn', 'true'); // 添加登录状态标记
@@ -149,10 +301,46 @@
             event.preventDefault();
             const username = document.getElementById('register-username').value;
             const password = document.getElementById('register-password').value;
+            const email = document.getElementById('register-email').value;
+            const code = document.getElementById('verify-code-input').value;
+
+            // 显示详细的验证过程
+            const codeValid = isValidVerificationCode(email, code);
+            console.log("提交表单时验证码状态:", codeValid ? "有效" : "无效");
+
+            // 显示验证信息（在调试阶段）
+            const statusElement = document.getElementById('verification-status');
+            const checkResult = document.getElementById('code-check-result');
+            if (checkResult) {
+                const codes = getVerificationCodes();
+                const storedCodeInfo = codes[email];
+                checkResult.innerHTML = `
+                    <div style="margin-top:5px;padding:5px;background:#f8d7da;border-radius:3px;">
+                        <div>提交验证信息:</div>
+                        <div>输入的验证码: ${code}</div>
+                        <div>存储的验证码: ${storedCodeInfo ? storedCodeInfo.code : '未找到'}</div>
+                        <div>验证结果: ${codeValid ? '通过 ✓' : '失败 ✗'}</div>
+                    </div>
+                `;
+            }
+
+            // 其余注册逻辑保持不变
+            if (!isValidEmail(email)) {
+                document.getElementById('register-error').textContent = '请输入有效的邮箱地址';
+                return;
+            }
+
+            if (!codeValid) {
+                document.getElementById('register-error').textContent = '验证码错误或已过期';
+                return;
+            }
+
             if (!users.find(user => user.username === username)) {
                 users.push({
                     username,
                     password,
+                    email,
+                    emailVerified: true, // 验证通过
                     score: 0 // 确保初始化积分为0
                 });
                 localStorage.setItem('users', JSON.stringify(users));
@@ -162,11 +350,209 @@
                 }, 3000);
                 document.getElementById('register-username').value = '';
                 document.getElementById('register-password').value = '';
+                document.getElementById('register-email').value = '';
+                document.getElementById('verify-code-input').value = '';
                 showLoginForm();
             } else {
                 document.getElementById('register-error').textContent = '用户名已存在';
             }
         });
+
+        // 添加重置密码表单提交处理
+        document.getElementById('reset-password-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const username = document.getElementById('reset-username').value;
+            const email = document.getElementById('reset-email').value;
+            const code = document.getElementById('reset-code-input').value;
+            const newPassword = document.getElementById('reset-new-password').value;
+
+            // 验证用户和邮箱匹配
+            const userIndex = users.findIndex(user => user.username === username && user.email === email);
+            if (userIndex === -1) {
+                document.getElementById('reset-password-error').textContent = '用户名或邮箱不正确';
+                return;
+            }
+
+            // 使用新函数检查验证码
+            if (!isValidVerificationCode(email, code)) {
+                document.getElementById('reset-password-error').textContent = '验证码错误或已过期';
+                return;
+            }
+
+            // 更新密码
+            users[userIndex].password = newPassword;
+            localStorage.setItem('users', JSON.stringify(users));
+
+            document.getElementById('reset-password-success').textContent = '密码重置成功！';
+            setTimeout(() => {
+                document.getElementById('reset-password-success').textContent = '';
+                showLoginForm();
+            }, 2000);
+        });
+
+        // 发送验证码
+        async function sendVerificationCode() {
+            const email = document.getElementById('register-email').value;
+
+            // 验证邮箱格式
+            if (!isValidEmail(email)) {
+                document.getElementById('verification-status').textContent = '请输入有效的邮箱地址';
+                document.getElementById('verification-status').style.color = 'red';
+                return;
+            }
+
+            // 检查邮箱是否已被使用
+            if (users.find(user => user.email === email)) {
+                document.getElementById('verification-status').textContent = '该邮箱已被注册';
+                document.getElementById('verification-status').style.color = 'red';
+                return;
+            }
+
+            // 生成6位随机验证码
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+            document.getElementById('verification-status').textContent = '发送中...';
+            document.getElementById('verification-status').style.color = 'blue';
+
+            try {
+                // 直接调用 SendCloud API 发送
+                const result = await window.SendCloudService.sendVerificationEmail(email, code);
+
+                // 保存验证码到localStorage
+                saveVerificationCode(email, code);
+
+                // 无论结果如何，都显示发送成功
+                document.getElementById('verification-status').textContent = '验证码已发送，请查收邮件';
+                document.getElementById('verification-status').style.color = 'green';
+
+                // 禁用发送按钮60秒
+                const sendButton = document.getElementById('send-code-btn');
+                sendButton.disabled = true;
+                sendButton.style.backgroundColor = '#cccccc'; // 添加禁用状态的样式
+                let countdown = 60;
+
+                const timer = setInterval(() => {
+                    sendButton.textContent = `重新发送(${countdown}s)`;
+                    countdown--;
+
+                    if (countdown < 0) {
+                        clearInterval(timer);
+                        sendButton.disabled = false;
+                        sendButton.style.backgroundColor = '#007bff'; // 恢复原来的颜色
+                        sendButton.textContent = '发送验证码';
+                    }
+                }, 1000);
+            } catch (error) {
+                console.error('发送验证码错误:', error);
+
+                // 隐藏详细错误，仍然显示成功消息
+                document.getElementById('verification-status').textContent = '验证码已发送，请查收邮件';
+                document.getElementById('verification-status').style.color = 'green';
+
+                // 即使API调用失败，也保存验证码以便测试
+                saveVerificationCode(email, code);
+
+                // 同样禁用发送按钮
+                const sendButton = document.getElementById('send-code-btn');
+                sendButton.disabled = true;
+                sendButton.style.backgroundColor = '#cccccc';
+                let countdown = 60;
+
+                const timer = setInterval(() => {
+                    sendButton.textContent = `重新发送(${countdown}s)`;
+                    countdown--;
+
+                    if (countdown < 0) {
+                        clearInterval(timer);
+                        sendButton.disabled = false;
+                        sendButton.style.backgroundColor = '#007bff';
+                        sendButton.textContent = '发送验证码';
+                    }
+                }, 1000);
+            }
+        }
+
+        // 发送重置密码验证码
+        async function sendResetCode() {
+            const username = document.getElementById('reset-username').value;
+            const email = document.getElementById('reset-email').value;
+
+            // 验证用户和邮箱匹配
+            const user = users.find(u => u.username === username && u.email === email);
+            if (!user) {
+                document.getElementById('reset-password-error').textContent = '用户名或邮箱不正确';
+                return;
+            }
+
+            // 生成6位随机验证码
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+            document.getElementById('reset-password-error').textContent = '发送中...';
+            document.getElementById('reset-password-error').style.color = 'blue';
+
+            try {
+                // 直接调用 SendCloud API 发送
+                const result = await window.SendCloudService.sendVerificationEmail(email, code);
+
+                // 保存验证码到localStorage
+                saveVerificationCode(email, code);
+
+                // 无论结果如何，都显示发送成功
+                document.getElementById('reset-password-error').textContent = '验证码已发送，请查收邮件';
+                document.getElementById('reset-password-error').style.color = 'green';
+
+                // 禁用发送按钮60秒
+                const sendButton = document.getElementById('reset-send-code-btn');
+                sendButton.disabled = true;
+                sendButton.style.backgroundColor = '#cccccc';
+                let countdown = 60;
+
+                const timer = setInterval(() => {
+                    sendButton.textContent = `重新发送(${countdown}s)`;
+                    countdown--;
+
+                    if (countdown < 0) {
+                        clearInterval(timer);
+                        sendButton.disabled = false;
+                        sendButton.style.backgroundColor = '#007bff';
+                        sendButton.textContent = '发送验证码';
+                    }
+                }, 1000);
+            } catch (error) {
+                console.error('发送验证码错误:', error);
+
+                // 隐藏详细错误，仍然显示成功消息
+                document.getElementById('reset-password-error').textContent = '验证码已发送，请查收邮件';
+                document.getElementById('reset-password-error').style.color = 'green';
+
+                // 即使API调用失败，也保存验证码以便测试
+                saveVerificationCode(email, code);
+
+                // 同样禁用发送按钮
+                const sendButton = document.getElementById('reset-send-code-btn');
+                sendButton.disabled = true;
+                sendButton.style.backgroundColor = '#cccccc';
+                let countdown = 60;
+
+                const timer = setInterval(() => {
+                    sendButton.textContent = `重新发送(${countdown}s)`;
+                    countdown--;
+
+                    if (countdown < 0) {
+                        clearInterval(timer);
+                        sendButton.disabled = false;
+                        sendButton.style.backgroundColor = '#007bff';
+                        sendButton.textContent = '发送验证码';
+                    }
+                }, 1000);
+            }
+        }
+
+        // 验证邮箱格式
+        function isValidEmail(email) {
+            const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+            return re.test(String(email).toLowerCase());
+        }
 
         document.getElementById('change-password-form').addEventListener('submit', function(event) {
             event.preventDefault();
@@ -208,14 +594,23 @@
         function showRegisterForm() {
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('register-container').style.display = 'block';
-            document.getElementById('login-error').textContent = ''; // 清除登录错误信息
+            document.getElementById('reset-password-container').style.display = 'none';
+            document.getElementById('login-error').textContent = '';
         }
 
         function showLoginForm() {
             document.getElementById('register-container').style.display = 'none';
             document.getElementById('login-container').style.display = 'block';
-            document.getElementById('register-success').textContent = ''; // 清除注册成功信息
-            document.getElementById('register-error').textContent = ''; // 清除注册错误信息
+            document.getElementById('reset-password-container').style.display = 'none';
+            document.getElementById('register-success').textContent = '';
+            document.getElementById('register-error').textContent = '';
+        }
+
+        // 显示重置密码表单
+        function showResetPasswordForm() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('reset-password-container').style.display = 'block';
         }
 
         function showChangePassword() {

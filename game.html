@@ -71,12 +71,44 @@
             display: flex;
             justify-content: space-between;
         }
+        
+        .user-info {
+            width: 300px;
+            margin: 20px auto;
+            padding: 15px;
+            background-color: #e9f7ef;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .user-info p {
+            margin: 5px 0;
+        }
+        
+        .verified-badge {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 5px;
+        }
     </style>
 </head>
 
 <body>
     <h1>游戏</h1>
     <p>欢迎来到游戏界面！在这里您可以开始游戏。</p>
+
+    <!-- 添加用户信息面板 -->
+    <div class="user-info" id="user-info-panel">
+        <h3>用户信息</h3>
+        <p>用户名: <span id="display-username"></span></p>
+        <p>邮箱: <span id="display-email"></span> <span id="verified-badge" class="verified-badge">已验证</span></p>
+        <p>积分: <span id="display-score">0</span></p>
+    </div>
 
     <!-- 添加兑换奖励按钮 -->
     <div style="text-align: center; margin: 20px 0;">
@@ -122,6 +154,16 @@
             window.location.href = 'login.html';
             return false;
         }
+
+        // 检查邮箱是否已验证
+        if (!currentUser.emailVerified) {
+            alert('您的账号尚未通过邮箱验证，请重新注册并完成验证。');
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+            return false;
+        }
+
         return true;
     }
 
@@ -129,6 +171,26 @@
     if (!checkLogin()) {
         throw new Error('未登录');
     }
+
+    // 显示用户信息
+    function displayUserInfo() {
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (currentUser) {
+            document.getElementById('display-username').textContent = currentUser.username;
+            document.getElementById('display-email').textContent = currentUser.email || '未设置';
+            document.getElementById('display-score').textContent = currentUser.score || 0;
+
+            // 显示或隐藏已验证徽章
+            if (currentUser.emailVerified) {
+                document.getElementById('verified-badge').style.display = 'inline-block';
+            } else {
+                document.getElementById('verified-badge').style.display = 'none';
+            }
+        }
+    }
+
+    // 页面加载时显示用户信息
+    displayUserInfo();
 
     function startSnakeGame() {
         // 这里可以添加进入贪吃蛇游戏的逻辑
@@ -215,6 +277,7 @@
         localStorage.setItem('users', JSON.stringify(users));
         localStorage.setItem('currentUser', JSON.stringify(user));
         updateScoreboard();
+        displayUserInfo(); // 更新显示的用户信息
     }
 
     // 获取并显示积分排行榜
@@ -227,7 +290,7 @@
 
         // 更新显示
         scoreList.innerHTML = sortedUsers.map((user, index) =>
-            `<li>${index + 1}. ${user.username}: ${user.score}分</li>`
+            `<li>${index + 1}. ${user.username}: ${user.score}分 ${user.emailVerified ? '<span class="verified-badge" style="font-size:10px;">已验证</span>' : ''}</li>`
         ).join('');
     }
 
